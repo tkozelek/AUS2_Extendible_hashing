@@ -7,6 +7,7 @@ import kozelek.interfaces.IRecord;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class Block<T extends IRecord<T>> implements IByteData {
     private ArrayList<T> records;
@@ -52,13 +53,52 @@ public class Block<T extends IRecord<T>> implements IByteData {
         this.prev = prev;
     }
 
-    public void addRecord(T record) {
-        if (this.records.size() < maxRecordCount) {
+    public int getValidCount() {
+        return validCount;
+    }
+
+    public int getMaxRecordCount() {
+        return maxRecordCount;
+    }
+
+    public T getRecord(T record) {
+        for (int i = 0; i < maxRecordCount; i++) {
+            if (record.equal(records.get(i))) {
+                return records.get(i);
+            }
+        }
+        return null;
+    }
+
+    public boolean addRecord(T record) {
+        if (validCount < maxRecordCount) {
             this.records.add(record);
             this.validCount++;
+            return true;
         } else {
-            throw new IllegalStateException("Block is full");
+            return false;
         }
+    }
+
+    public T removeRecord(T record) {
+        for (int i = 0; i < validCount; i++) {
+            if (record.equal(records.get(i))) {
+                T removedRecord = records.get(i);
+
+                // ak nie je na konci
+                // zoberiem posledny a vložim ho na jeho miesto
+                if (i < validCount - 1) {
+                    Collections.swap(records, i, validCount - 1);
+                }
+
+                // odstanime posledny záznam
+                records.remove(validCount - 1);
+                validCount--;
+
+                return removedRecord; // Vrátime odstránený záznam
+            }
+        }
+        return null;
     }
 
     @Override
@@ -72,8 +112,8 @@ public class Block<T extends IRecord<T>> implements IByteData {
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
             DataOutputStream dataStream = new DataOutputStream(byteStream);
 
+            // recordy
             dataStream.writeInt(this.validCount);
-
             for (int i = 0; i < this.maxRecordCount; i++) {
                 if (i < this.validCount) {
                     dataStream.write(this.records.get(i).toByteArray());
@@ -81,6 +121,8 @@ public class Block<T extends IRecord<T>> implements IByteData {
                     dataStream.write(new byte[this.instance.getSize()]);
                 }
             }
+
+            // pointre na dalsi blok
             dataStream.writeInt(this.prev);
             dataStream.writeInt(this.next);
 
@@ -117,5 +159,15 @@ public class Block<T extends IRecord<T>> implements IByteData {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "Block{" +
+                "records=" + records +
+                ", validCount=" + validCount +
+                ", maxRecordCount=" + maxRecordCount +
+                ", next=" + next +
+                ", prev=" + prev;
     }
 }

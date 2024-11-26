@@ -37,11 +37,11 @@ public class Car implements IRecord<Car> {
 
     @Override
     public int getSize() {
-        return Helper.VELKOST_BYTE + Helper.MAX_MENO +
-                Helper.VELKOST_BYTE + Helper.MAX_PRIEZVISKO +
-                Helper.VELKOST_INTEGER +
-                Helper.VELKOST_BYTE + Helper.MAX_ECV +
-                (Helper.MAX_POCET_SERVISOV * new Servis().getSize());
+        return Helper.VELKOST_BYTE + Helper.MAX_MENO + // meno
+                Helper.VELKOST_BYTE + Helper.MAX_PRIEZVISKO + // priezvisko
+                Helper.VELKOST_INTEGER + // id
+                Helper.VELKOST_BYTE + Helper.MAX_ECV; //+ // ecv
+                //(Helper.MAX_POCET_SERVISOV * new Servis().getSize());
     }
 
     @Override
@@ -60,18 +60,18 @@ public class Car implements IRecord<Car> {
             // byte _ ECV
             Helper.writeString(dataStream, ECV, Helper.MAX_ECV);
 
-            // byte pocet zaznamov
-            dataStream.writeByte(zaznamy.length);
-
-            for (Servis s : zaznamy) {
-                if (s != null) {
-                    byte[] bytes = s.toByteArray();
-                    dataStream.writeInt(bytes.length);
-                    dataStream.write(bytes);
-                } else {
-                    dataStream.writeInt(0);
-                }
-            }
+//            // byte pocet zaznamov
+//            dataStream.writeByte(zaznamy.length);
+//
+//            for (Servis s : zaznamy) {
+//                if (s != null) {
+//                    byte[] bytes = s.toByteArray();
+//                    dataStream.writeInt(bytes.length);
+//                    dataStream.write(bytes);
+//                } else {
+//                    dataStream.writeInt(0);
+//                }
+//            }
 
             return byteStream.toByteArray();
         } catch (IOException e) {
@@ -96,21 +96,21 @@ public class Car implements IRecord<Car> {
 
             this.ECV = Helper.readString(dataStream, Helper.MAX_ECV);
 
-            int visitCount = dataStream.readByte();
-            this.zaznamy = new Servis[visitCount];
-
-            for (int i = 0; i < visitCount; i++) {
-                int length = dataStream.readInt();
-                if (length > 0) {
-                    byte[] byteArray = new byte[length];
-                    dataStream.readFully(byteArray);
-                    Servis servis = new Servis();
-                    servis.fromByteArray(byteArray);
-                    zaznamy[i] = servis;
-                } else {
-                    zaznamy[i] = null;
-                }
-            }
+//            int visitCount = dataStream.readByte();
+//            this.zaznamy = new Servis[visitCount];
+//
+//            for (int i = 0; i < visitCount; i++) {
+//                int length = dataStream.readInt();
+//                if (length > 0) {
+//                    byte[] byteArray = new byte[length];
+//                    dataStream.read(byteArray);
+//                    Servis servis = new Servis();
+//                    servis.fromByteArray(byteArray);
+//                    zaznamy[i] = servis;
+//                } else {
+//                    zaznamy[i] = null;
+//                }
+//            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

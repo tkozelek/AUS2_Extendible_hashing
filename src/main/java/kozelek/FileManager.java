@@ -16,9 +16,10 @@ public class FileManager<T extends IRecord<T>> {
 
         try {
             // vytvori subor ak neexistuje
-            if (!this.file.exists()) {
-                this.file.createNewFile();
+            if (this.file.exists()) {
+                this.file.delete();
             }
+            this.file.createNewFile();
 
             this.raf = new RandomAccessFile(this.file, "rw");
         }  catch (IOException e) {
@@ -26,30 +27,56 @@ public class FileManager<T extends IRecord<T>> {
         }
     }
 
-    public void writeBytes(long position, byte[] data) throws IOException {
-        raf.seek(position);
+    public void writeBytes(int adress, byte[] data) throws IOException {
+        raf.seek(adress);
         raf.write(data);
     }
 
-    public void writeBlock(long position, Block<T> block) throws IOException {
-        this.writeBytes(position, block.toByteArray());
+    public void writeBlock(int adress, Block<T> block) {
+        try {
+            this.writeBytes(adress, block.toByteArray());
+        } catch (IOException e) {
+            throw new RuntimeException("Chyba pri zapise blocku.", e);
+        }
     }
 
-    public byte[] readBytes(long position, int length) throws IOException {
-        raf.seek(position);
-        byte[] bytes = new byte[length];
-        raf.read(bytes);
-        return bytes;
+    public long appendBlock(Block<T> block) {
+        try {
+            long endOfFile = this.file.length();
+            raf.seek(endOfFile);
+            raf.write(block.toByteArray());
+            return endOfFile;
+        } catch (IOException e) {
+            throw new RuntimeException("Chyba pri appende blocku na koniec suboru.", e);
+
+        }
     }
 
-    public void close() throws IOException {
-        if (this.raf != null) {
-            this.raf.close();
+    public byte[] readBytes(int adress, int byteCount) {
+        try {
+            raf.seek(adress);
+            byte[] bytes = new byte[byteCount];
+            raf.read(bytes);
+            return bytes;
+        } catch (IOException e) {
+            throw new RuntimeException("Chyba pri citani bytov.", e);
+        }
+    }
+
+    public void close() {
+        try {
+            if (this.raf != null) {
+                this.raf.close();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Chyba pri zatvarani suboru", e);
         }
     }
 
     public long getFileSize() throws IOException {
         return raf.length();
     }
+
+
 
 }

@@ -33,11 +33,10 @@ public class Helper {
         try {
             if (text != null) {
                 byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-                // dlzka stringu (1 byte)
+                // dlzka stringu
                 dataStream.writeByte(bytes.length);
-                // string
                 dataStream.write(bytes);
-                // zbytok naplnime
+                // dopln text
                 for (int i = 0; i < (maxLengthOfString - bytes.length); i++) {
                     dataStream.writeByte(0);
                 }
@@ -48,7 +47,7 @@ public class Helper {
                 }
             }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error writing string", e);
         }
     }
 
@@ -62,17 +61,17 @@ public class Helper {
     public static String readString(DataInputStream dataStream, int maxLengthOfString) {
         try {
             int length = dataStream.readByte(); // dlzka stringu
+
             if (length > 0) {
-                byte[] bytes = new byte[length];
+                byte[] bytes = new byte[maxLengthOfString];
                 dataStream.readFully(bytes);
-                dataStream.skipBytes(maxLengthOfString - length); // preskocime nepotrebne byty (0)
-                return new String(bytes, StandardCharsets.UTF_8);
+                return new String(bytes, StandardCharsets.UTF_8).substring(0, length);
             } else {
-                dataStream.skipBytes(maxLengthOfString); // ak je dlzka stringu 0, preskocime celych x bytov
+                dataStream.skipBytes(maxLengthOfString);
                 return null;
             }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error reading string", e);
         }
     }
 }
