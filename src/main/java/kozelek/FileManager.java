@@ -73,10 +73,21 @@ public class FileManager<T extends IRecord<T>> {
         }
     }
 
-    public long getFileSize() throws IOException {
-        return raf.length();
+    public long getFileSize() {
+        try {
+            return raf.length();
+        } catch (IOException e) {
+            throw new RuntimeException("Chyba getFileSize", e);
+        }
     }
 
 
-
+    public void truncateFile(int bytesToRemove) {
+        try {
+            long newLength = Math.max(0, raf.length() - bytesToRemove);
+            raf.setLength(newLength);
+        } catch (IOException e) {
+            throw new RuntimeException("Chyba pri skracovaní suboru", e);
+        }
+    }
 }

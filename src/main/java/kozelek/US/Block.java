@@ -61,13 +61,30 @@ public class Block<T extends IRecord<T>> implements IByteData {
         return maxRecordCount;
     }
 
+    public void edit(T oldRecord, T newRecord) {
+        for (int i = 0; i < validCount; i++) {
+            if (records.get(i).equal(oldRecord)) {
+                records.set(i, newRecord);
+            }
+        }
+    }
+
     public T getRecord(T record) {
-        for (int i = 0; i < maxRecordCount; i++) {
+        for (int i = 0; i < validCount; i++) {
             if (record.equal(records.get(i))) {
                 return records.get(i);
             }
         }
         return null;
+    }
+
+    public boolean contains(T record) {
+        for (int i = 0; i < validCount; i++) {
+            if (record.equal(records.get(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean addRecord(T record) {
@@ -80,25 +97,24 @@ public class Block<T extends IRecord<T>> implements IByteData {
         }
     }
 
-    public T removeRecord(T record) {
+    public boolean removeRecord(T record) {
         for (int i = 0; i < validCount; i++) {
             if (record.equal(records.get(i))) {
-                T removedRecord = records.get(i);
-
                 // ak nie je na konci
-                // zoberiem posledny a vložim ho na jeho miesto
+                // vymenim s poslednym v arrayliste
                 if (i < validCount - 1) {
                     Collections.swap(records, i, validCount - 1);
                 }
 
-                // odstanime posledny záznam
+                // odstanime posledny record
                 records.remove(validCount - 1);
                 validCount--;
 
-                return removedRecord; // Vrátime odstránený záznam
+                return true; // vratime vymazany record
             }
         }
-        return null;
+        // neexistuje
+        return false;
     }
 
     @Override

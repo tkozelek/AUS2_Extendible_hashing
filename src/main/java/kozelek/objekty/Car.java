@@ -9,15 +9,9 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Objects;
 
 public class Car implements IRecord<Car> {
-    // maximalne hodnoty
-
-
-    // velkosti
-
-
-    // atributy
     private String meno;
     private String priezvisko;
     private int id;
@@ -131,11 +125,19 @@ public class Car implements IRecord<Car> {
 
     @Override
     public boolean equal(Car other) {
-        return this.id == other.id;
+        return this.id == other.id || Objects.equals(this.ECV, other.ECV);
     }
 
     @Override
     public Car createInstance() {
         return new Car();
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getECV() {
+        return ECV;
     }
 }
