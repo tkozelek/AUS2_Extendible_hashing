@@ -13,52 +13,41 @@ public class Main {
 
         Random rand = new Random();
 
-        rand.setSeed(1);
         int blokovacifaktor = 3;
 
         HeapFile<Car> heap = new HeapFile<>("heapfile.bin", blokovacifaktor, Car.class);
         ArrayList<Car> cars = new ArrayList<>();
         ArrayList<Integer> indexes = new ArrayList<>();
 
-        for (int i = 0; i < 200; i++) {
+        for (int i = 0; i < 10000; i++) {
             Car car = new Car("Tomas" + i, "Koze" + i, i, "SPZ" + i);
             cars.add(car);
             int index = heap.insert(car);
             indexes.add(index);
         }
 
-        heap.printAll();
-        System.out.println(heap);
+        long sizeBefore = heap.fileSize();
 
-
-
-        System.out.println("_________________________");
-
-        for (int i = 0; i < 100; i++) {
-            int index = rand.nextInt(indexes.size());
-            Car car = cars.remove(index);
-            int indexBlock = indexes.remove(index);
-
-            heap.delete(indexBlock, car);
+        for (int i = 0; i < 10000; i++) {
+            int index = rand.nextInt(cars.size());
+            Car car = cars.removeLast();
+            int blockIndex = indexes.removeLast();
+            heap.delete(blockIndex, car);
         }
 
-        for (int i = 0; i < 200; i++) {
+        for (int i = 0; i < 100; i++) {
             Car car = new Car("Tomas" + i, "Koze" + i, i, "SPZ" + i);
             cars.add(car);
             int index = heap.insert(car);
             indexes.add(index);
         }
 
-        for (int i = 0; i < 100; i++) {
-            int index = rand.nextInt(indexes.size());
-            Car car = cars.remove(index);
-            int indexBlock = indexes.remove(index);
+        long sizeAfter = heap.fileSize();
 
-            heap.delete(indexBlock, car);
-        }
-
-        heap.printAll();
         System.out.println(heap);
+        System.out.println(cars.size());
+        System.out.println(heap.getRecordCount());
+        System.out.format("%d %d", sizeBefore, sizeAfter);
 
         heap.closeFileManager();
     }

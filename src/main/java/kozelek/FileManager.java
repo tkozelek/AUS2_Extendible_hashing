@@ -81,6 +81,10 @@ public class FileManager<T extends IRecord<T>> {
         }
     }
 
+    public int getLastBlockIndex(int blockSize) {
+        return (int) (getFileSize() / blockSize) - 1;
+    }
+
 
     public void truncateFile(int bytesToRemove) {
         try {

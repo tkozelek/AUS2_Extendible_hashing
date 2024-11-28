@@ -65,6 +65,7 @@ public class Block<T extends IRecord<T>> implements IByteData {
         for (int i = 0; i < validCount; i++) {
             if (records.get(i).equal(oldRecord)) {
                 records.set(i, newRecord);
+                return;
             }
         }
     }
@@ -185,5 +186,9 @@ public class Block<T extends IRecord<T>> implements IByteData {
                 ", maxRecordCount=" + maxRecordCount +
                 ", next=" + next +
                 ", prev=" + prev;
+    }
+
+    public boolean isFull() {
+        return validCount == maxRecordCount;
     }
 }

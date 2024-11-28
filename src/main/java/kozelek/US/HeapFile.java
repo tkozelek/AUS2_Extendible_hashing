@@ -3,14 +3,13 @@ package kozelek.US;
 import kozelek.FileManager;
 import kozelek.interfaces.IRecord;
 
-import java.io.File;
 import java.util.ArrayList;
 
 public class HeapFile<T extends IRecord<T>> {
     private int recordCount;
     private Class<T> recordClass;
     private int indexEmptyBlock;
-    private int indexPartialyEmptyBlock;
+    private int indexPartialBlock;
 
     private FileManager<T> fileManager;
     private Block<T> block;
@@ -23,196 +22,328 @@ public class HeapFile<T extends IRecord<T>> {
         this.block = new Block<>(recordCount, recordClass);
 
         this.indexEmptyBlock = -1;
-        this.indexPartialyEmptyBlock = -1;
+        this.indexPartialBlock = -1;
     }
 
     public int insert(T record) {
-        int adress = getAdressOfNextInsert();
-        Block<T> tempBlock = new Block<>(recordCount, recordClass);
-        // nemame prazdny ani volny blok
-        // vytvorime novy, vlozime
-        if (adress == -1) {
-            Block<T> newBlock = new Block<>(recordCount, recordClass);
-            newBlock.addRecord(record);
-            // zapiseme na koniec suboru
-            int adresa = (int) (this.fileManager.appendBlock(newBlock) / block.getSize()); // vloženie
-            // ak nemáme partial block
-            // už máme
-            if (indexPartialyEmptyBlock == -1 && newBlock.getValidCount() != newBlock.getMaxRecordCount()) {
-                indexPartialyEmptyBlock = adresa;
-            }
-            return adresa;
+        int index = getIndexOfNextInsert();
+        int address = index * block.getSize();
+
+        if (index == -1) {
+            return handleNewBlockInsertion(record);
         }
-
-        // inak načitame blok
-        byte[] bytes = this.fileManager.readBytes(adress, block.getSize()); // citanie
-        block.fromByteArray(bytes);
-        block.addRecord(record);
-
-        int wasEmptyIndex = adress / block.getSize();
-        if (wasEmptyIndex == this.indexEmptyBlock) { // ak vkladame do toho čo bol ako prazdny index
-            // ak bol prazdny a ma dalsi prazdny
-            // dalsi posunieme na indexemptyblock
-            if (block.getNext() != -1) {
-                bytes = this.fileManager.readBytes(block.getNext() * block.getSize(), block.getSize()); // precitame next
-                tempBlock.fromByteArray(bytes);
-                tempBlock.setPrev(-1);
-                this.fileManager.writeBlock(block.getNext() * block.getSize(), tempBlock);
-
-                this.indexEmptyBlock = block.getNext();
-                block.setNext(-1);
-            } else {
-                this.indexEmptyBlock = -1;
+        block = this.loadBlock(index);
+        boolean wasEmpty = block.getValidCount() == 0;
+        if (block.addRecord(record)) {
+            if (wasEmpty && block.isFull()) {
+                handleInsertionIntoEmptyBlockBecomesFull(index);
+            } else if (wasEmpty) {
+                handleInsertionIntoEmptyBlock(index);
+            } else if (block.isFull()) {
+                // ak sa z neho stane plny, bol partial
+                handleFullBlockFromPartial(index);
             }
 
-            this.changePartialIndex(wasEmptyIndex);
-
-
-        } else if (block.getValidCount() == block.getMaxRecordCount()) { // ak sa naplnil
-            if (block.getNext() != -1) {
-                this.indexPartialyEmptyBlock = block.getNext();
-                block.setNext(-1);
-                // musime nacitat nasledovnika a upravit mu prev index na -1, posun na prve miesto
-                // -1 _ 100 _ 200 _ 300 _ -1
-                // -1 _ 200 _ 300 _ -1
-                bytes = this.fileManager.readBytes(this.indexPartialyEmptyBlock * block.getSize(), block.getSize()); // citanie
-                tempBlock.fromByteArray(bytes);
-                tempBlock.setPrev(-1);
-                this.fileManager.writeBlock(this.indexPartialyEmptyBlock * block.getSize(), tempBlock); // zapis upraveneho
-            } else {
-                this.indexPartialyEmptyBlock = -1;
-            }
-        }
-        this.fileManager.writeBlock(adress, block); // zapisanie
-        return adress / block.getSize();
-    }
-
-
-    public int getAdressOfNextInsert() {
-        int position = -1;
-        if (indexPartialyEmptyBlock != -1) {
-            position = indexPartialyEmptyBlock * block.getSize();
-        } else if (indexEmptyBlock != -1) {
-            position = indexEmptyBlock * block.getSize();
-        }
-        return position;
-    }
-
-    public void changePartialIndex(int beforeIndex) {
-        if (indexPartialyEmptyBlock == -1 && block.getValidCount() != block.getMaxRecordCount()) {
-            indexPartialyEmptyBlock = beforeIndex;
-        } else if (indexPartialyEmptyBlock != -1 && block.getValidCount() != block.getMaxRecordCount()) {
-            Block<T> tempBlock = new Block<>(recordCount, recordClass);
-            byte[] bytes = this.fileManager.readBytes(indexPartialyEmptyBlock * block.getSize(), block.getSize());
-            tempBlock.fromByteArray(bytes);
-            // aktualnemu partial nastavíme predchodzieho doteraz prazdnemu bloku
-            tempBlock.setPrev(beforeIndex);
-
-            block.setNext(indexPartialyEmptyBlock); // aktualnemu nastavime ako dalsi pred. partial
-            block.setPrev(-1);
-
-            this.fileManager.writeBlock(indexPartialyEmptyBlock * block.getSize(), tempBlock);
-
-            indexPartialyEmptyBlock = beforeIndex;
-        }
-    }
-
-    public void changeEmptyIndex(int beforeIndex) {
-        if (indexEmptyBlock == -1) {
-            indexEmptyBlock = beforeIndex;
-        } else if (indexEmptyBlock != -1) {
-            Block<T> tempBlock = new Block<>(recordCount, recordClass);
-            byte[] bytes = this.fileManager.readBytes(indexEmptyBlock * block.getSize(), block.getSize());
-            tempBlock.fromByteArray(bytes);
-            // aktualnemu partial nastavíme predchodzieho doteraz prazdnemu bloku
-            tempBlock.setPrev(beforeIndex);
-
-            block.setNext(indexEmptyBlock); // aktualnemu nastavime ako dalsi pred. partial
-            block.setPrev(-1);
-            this.fileManager.writeBlock(indexEmptyBlock * block.getSize(), tempBlock);
-
-            indexEmptyBlock = beforeIndex;
+            this.fileManager.writeBlock(address, block);
+            return index;
+        } else {
+            throw new RuntimeException("Record nebol vložený");
         }
     }
 
     public void delete(int index, T record) {
-        int adress = index * block.getSize();
-        byte[] bytes = this.fileManager.readBytes(adress, block.getSize());
-        block.fromByteArray(bytes);
-        int beforeDelete = block.getValidCount();
-        int afterDelete = -1;
+        block = this.loadBlock(index);
+        int countBeforeDelete = block.getValidCount();
 
-        // vymaze sa, ak sa tam nachadza ofc
         if (block.removeRecord(record)) {
-            afterDelete = block.getValidCount();
+            int countAfterDelete = block.getValidCount();
 
-            // ak bol poloprazdny a zostal poloprazdny
-            // zapiseme zmenu a nerisime
-            if (beforeDelete != block.getMaxRecordCount() && afterDelete != 0) {
-                this.fileManager.writeBlock(adress, block);
+            // ak bol partial aj zostal, neriešime nič
+            if (countBeforeDelete != block.getMaxRecordCount() && countAfterDelete != 0) {
+                this.fileManager.writeBlock(index * block.getSize(), block);
                 return;
             }
 
-            // ak je po zmazaní prazdny
-            if (block.getValidCount() == 0) {
-                this.changeEmptyIndex(index);
-                this.truncateEmptyBlocks();
-            } else {
-                this.changePartialIndex(index);
+            // bol plny, je prazdny
+            // blok. faktor 1
+            if (countBeforeDelete == block.getMaxRecordCount() && countAfterDelete == 0) {
+                this.becomesEmptyFromFull(index);
+            } else if (countAfterDelete == 0) {
+                // blok je prazdny
+                this.becomesEmptyBlockFromPartial(index);
+
+                // Check if this is the last block
+                if (index == this.fileManager.getLastBlockIndex(block.getSize())) {
+                    this.truncateEmptyBlocks();
+                    return;
+                }
+            } else if (countBeforeDelete == block.getMaxRecordCount()) {
+                this.becomesPartialFromFull(index);
             }
 
-            // Write the modified block back to the file
-            this.fileManager.writeBlock(adress, block);
+            this.fileManager.writeBlock(index * block.getSize(), block);
         }
+    }
+
+    /**
+     * Block je prazdny po vložení sa stane plnym
+     * @param index block do ktorého sa vklada
+     */
+    private void handleInsertionIntoEmptyBlockBecomesFull(int index) {
+        if (block.getNext() != -1) {
+            Block<T> blockNext = this.loadBlock(block.getNext());
+            blockNext.setPrev(-1);
+            this.fileManager.writeBlock(index * block.getSize(), blockNext);
+
+            indexEmptyBlock = block.getNext();
+            block.setNext(-1);
+        } else {
+            indexEmptyBlock = -1;
+        }
+    }
+
+    public int getIndexOfNextInsert() {
+        int position = -1;
+        if (indexPartialBlock != -1) {
+            position = indexPartialBlock;
+        } else if (indexEmptyBlock != -1) {
+            position = indexEmptyBlock;
+        }
+        return position;
+    }
+
+    /**
+     * Ak je neexistuje partial alebo prazdny, vytvorí sa nový block
+     * vloží sa na koniec heapfile
+     * @param record vkladany zaznam
+     * @return int - index vkladaného bloku
+     */
+    private int handleNewBlockInsertion(T record) {
+        Block<T> newBlock = new Block<>(recordCount, recordClass);
+        newBlock.addRecord(record);
+        int newAddress = (int) (this.fileManager.appendBlock(newBlock) / block.getSize());
+
+        // partial aj empty musia byt prazdne
+        if (newBlock.getValidCount() != newBlock.getMaxRecordCount()) {
+            indexPartialBlock = newAddress;
+        }
+        return newAddress;
+    }
+
+    /**
+     * Ak vkladam do prazdneho bloku
+     * @param blockIndex index na block do ktoreho vkladam
+     */
+    private void handleInsertionIntoEmptyBlock(int blockIndex) {
+        if (block.getNext() != -1) {
+            insertionIntoEmptyBlockIfBlockHasNext();
+        } else {
+            this.indexEmptyBlock = -1;
+        }
+        // ak neni plny nastavíme ho na partial
+        if (block.getValidCount() != block.getMaxRecordCount() && indexPartialBlock != -1)
+            updatePartialBlockChain(blockIndex);
+        else
+            indexPartialBlock = blockIndex;
+    }
+
+
+    private void insertionIntoEmptyBlockIfBlockHasNext() {
+        // block ma dalsi
+        // posun dalsieho na indexemptyblock
+        Block<T> blockNext = this.loadBlock(block.getNext());
+        blockNext.setPrev(-1);
+        this.fileManager.writeBlock(block.getNext() * block.getSize(), blockNext);
+        this.indexEmptyBlock = block.getNext();
+        block.setNext(-1);
+    }
+
+    /**
+     * Vkladame do empty blocku, stava sa z neho partial
+     * aktualne existuje nejaky partial
+     * nastavi aktualny block na vrchol partial
+     * @param blockIndex - index blocku do ktorého vkladame (stava sa z neho partial)
+     */
+    private void updatePartialBlockChain(int blockIndex) {
+        Block<T> currentPartial = this.loadBlock(indexPartialBlock);
+        currentPartial.setPrev(blockIndex);
+        this.fileManager.writeBlock(indexPartialBlock * block.getSize(), currentPartial);
+
+        block.setNext(indexPartialBlock);
+        block.setPrev(-1);
+        indexPartialBlock = blockIndex;
+        this.fileManager.writeBlock(blockIndex * block.getSize(), block);
+    }
+
+    /**
+     * Block sa naplnil, nastav next ako partial
+     * Ak nie je next, nastav partial na -1
+     * Basically zmen partialblock na next
+     */
+    private void handleFullBlockFromPartial(int index) {
+        if (block.getNext() != -1) {
+            Block<T> blockNext = this.loadBlock(block.getNext());
+            blockNext.setPrev(-1);
+
+            this.fileManager.writeBlock(block.getNext() * block.getSize(), blockNext);
+
+            this.indexPartialBlock = block.getNext();
+            block.setNext(-1);
+
+            this.fileManager.writeBlock(index * block.getSize(), block);
+        } else {
+            this.indexPartialBlock = -1;
+        }
+    }
+
+    /**
+     * ak je blokovaci faktor 1
+     * vymaze sa a stava sa prazdny
+     * @param index block z ktoreho sa vymazava
+     */
+    private void becomesEmptyFromFull(int index) {
+        Block<T> blockPrev = this.loadBlock(indexEmptyBlock);
+        blockPrev.setPrev(index);
+        this.fileManager.writeBlock(indexEmptyBlock * block.getSize(), blockPrev);
+
+        block.setNext(indexEmptyBlock);
+        indexEmptyBlock = index;
+    }
+
+    /**
+     * Block bol plny, ale vymazaním sa stáva partial
+     * nastavime ho na indexpartial
+     * aktualny index posunieme dalej
+     * @param index block z ktoreho vymazavame record
+     */
+    private void becomesPartialFromFull(int index) {
+        if (indexPartialBlock != -1) {
+            Block<T> curPartial = this.loadBlock(indexPartialBlock);
+            curPartial.setPrev(index);
+            this.fileManager.writeBlock(indexPartialBlock * block.getSize(), curPartial);
+
+            block.setNext(indexPartialBlock);
+        }
+        indexPartialBlock = index;
+    }
+
+    /**
+     * Po vymazaní ostane blok prázdny, nastavime na emptyblock, posunieme ostatné
+     * ak sa nachádza v partial, musíme spojiť prev s next blockom
+     * STANE SA Z NEHO PRAZDNY BLOK
+     * Ak má prev aj next, prev.next sa nastavi na next a next.prev sa nastavi na prev
+     */
+    private void becomesEmptyBlockFromPartial(int index) {
+        boolean result = fixReferences(false);
+        if (!result) {
+            // nemá ani next ani prev
+            // čiže musí byť partial index
+            this.indexPartialBlock = -1;
+        }
+        if (indexEmptyBlock != -1) {
+            // nastavime ho na index empty
+            // pridame do zretazenia prazdnych
+            Block<T> curEmptyBlock = this.loadBlock(indexEmptyBlock);
+            curEmptyBlock.setPrev(index);
+            this.fileManager.writeBlock(indexEmptyBlock * block.getSize(), curEmptyBlock);
+
+            block.setNext(indexEmptyBlock);
+        } else {
+            block.setNext(-1);
+        }
+        block.setPrev(-1);
+
+        this.indexEmptyBlock = index;
+    }
+
+    /**
+     * Metoda načíta block na indexe
+     * @param index - index kde sa nachádza block v súbore
+     * @return Block<T>, načítaný block
+     */
+    private Block<T> loadBlock(int index) {
+        byte[] bytes = this.fileManager.readBytes(index * block.getSize(), block.getSize());
+        Block<T> loadedBlock = new Block<>(recordCount, recordClass);
+        loadedBlock.fromByteArray(bytes);
+        return loadedBlock;
     }
 
     public void truncateEmptyBlocks() {
         long fileSize = this.fileManager.getFileSize();
         int size = block.getSize();
         int lastBlockIndex = (int) (fileSize / size) - 1;
-        Block<T> lastBlock = new Block<>(recordCount, recordClass);
 
         while (lastBlockIndex >= 0) {
             // nacitaj posledny blok
-            byte[] bytes = this.fileManager.readBytes(lastBlockIndex * size, size);
-            lastBlock.fromByteArray(bytes);
 
             // ak je prazadny
-            if (lastBlock.getValidCount() == 0) {
+            if (block.getValidCount() == 0) {
                 // ak ma prepojenie na pred. empty block, nastav mu next na -1
-                if (lastBlock.getPrev() != -1) {
-                    byte[] prevBytes = this.fileManager.readBytes(lastBlock.getPrev() * size, size);
-                    Block<T> prevBlock = new Block<>(recordCount, recordClass);
-                    prevBlock.fromByteArray(prevBytes);
-                    prevBlock.setNext(-1);
-                    this.fileManager.writeBlock(lastBlock.getPrev() * size, prevBlock);
-                }
-
-                if (lastBlockIndex == indexEmptyBlock) {
+                boolean result = fixReferences(true);
+                if (!result) {
                     indexEmptyBlock = -1;
                 }
 
                 this.fileManager.truncateFile(size);
                 lastBlockIndex--;
+                if (lastBlockIndex >= 0) {
+                    block = loadBlock(lastBlockIndex);
+                }
             } else {
                 break;
             }
         }
     }
 
+    public long fileSize() {
+        return this.fileManager.getFileSize();
+    }
+
+    public boolean fixReferences(boolean truncate) {
+        boolean result = false;
+        if (block.getPrev() != -1 && block.getNext() != -1) {
+            // je v medzi dvoma partial blokmi
+            Block<T> blockPrev = this.loadBlock(block.getPrev());
+            Block<T> blockNext = this.loadBlock(block.getNext());
+            // nacitame oba bloky
+            blockPrev.setNext(block.getNext());
+            blockNext.setPrev(block.getPrev());
+            this.fileManager.writeBlock(block.getPrev() * block.getSize(), blockPrev);
+            this.fileManager.writeBlock(block.getNext() * block.getSize(), blockNext);
+            block.setPrev(-1);
+            block.setNext(-1);
+            result = true;
+        } else if (block.getPrev() != -1 && block.getNext() == -1) {
+            // ma prev block ale nema next, je na konci
+            Block<T> blockPrev = this.loadBlock(block.getPrev());
+            blockPrev.setNext(-1);
+            this.fileManager.writeBlock(block.getPrev() * block.getSize(), blockPrev);
+            block.setPrev(-1);
+            result = true;
+        } else if (block.getNext() != -1 && block.getPrev() == -1) {
+            // nema prev block, čiže je na začiatku partial
+            // ale ma next, takže next dalsi partial
+            Block<T> blockNext = this.loadBlock(block.getNext());
+            blockNext.setPrev(-1);
+            if (!truncate)
+                this.indexPartialBlock = block.getNext();
+            else {
+                this.indexEmptyBlock = block.getNext();
+            }
+            this.fileManager.writeBlock(block.getNext() * block.getSize(), blockNext);
+            block.setNext(-1);
+            result = true;
+        }
+        return result;
+    }
+
     public T getRecord(int index, T record) {
-        int adress = index * block.getSize();
-        Block<T> tempBlock = new Block<>(recordCount, recordClass);
-        byte[] bytes = this.fileManager.readBytes(adress, block.getSize());
-        tempBlock.fromByteArray(bytes);
+        Block<T> tempBlock = this.loadBlock(index);
         return tempBlock.getRecord(record);
     }
 
     public Block<T> getBlock(int index, T record) {
-        int adress = index * block.getSize();
-        Block<T> tempBlock = new Block<>(recordCount, recordClass);
-        byte[] bytes = this.fileManager.readBytes(adress, block.getSize());
-        tempBlock.fromByteArray(bytes);
+        Block<T> tempBlock = this.loadBlock(index);
 
         if (tempBlock.contains(record))
             return tempBlock;
@@ -221,10 +352,9 @@ public class HeapFile<T extends IRecord<T>> {
     }
 
     public void edit(int index, T oldRecord, T newRecord) {
-        int adress = index * block.getSize();
-        byte[] bytes = this.fileManager.readBytes(adress, block.getSize());
-        block.fromByteArray(bytes);
+        block = this.loadBlock(index);
         block.edit(oldRecord, newRecord);
+        this.fileManager.writeBlock(index * block.getSize(), block);
     }
 
     public ArrayList<Block<T>> getAllBlocks() {
@@ -235,10 +365,8 @@ public class HeapFile<T extends IRecord<T>> {
 
         for (int i = 0; i < numberOfBlocks; i++) {
             // precitaj block na indexe
-            byte[] blockData = this.fileManager.readBytes(i * block.getSize(), block.getSize());
-            Block<T> block = new Block<>(recordCount, recordClass);
-            block.fromByteArray(blockData);
-            blocks.add(block);
+            Block<T> tempBlock = this.loadBlock(i);
+            blocks.add(tempBlock);
         }
 
         return blocks;
@@ -254,6 +382,15 @@ public class HeapFile<T extends IRecord<T>> {
         }
     }
 
+    public int getRecordCount() {
+        ArrayList<Block<T>> blocks = this.getAllBlocks();
+        int sum = 0;
+        for (Block<T> block : blocks) {
+            sum += block.getValidCount();
+        }
+        return sum;
+    }
+
     public void closeFileManager() {
         this.fileManager.close();
     }
@@ -262,7 +399,15 @@ public class HeapFile<T extends IRecord<T>> {
     public String toString() {
         return "HeapFile{" +
                 "indexEmptyBlock=" + indexEmptyBlock +
-                ", indexPartialyEmptyBlock=" + indexPartialyEmptyBlock +
+                ", indexPartialyEmptyBlock=" + indexPartialBlock +
                 '}';
+    }
+
+    public boolean emptyExists() {
+        return this.indexEmptyBlock != -1;
+    }
+
+    public boolean partialExists() {
+        return this.indexPartialBlock != -1;
     }
 }

@@ -118,14 +118,12 @@ public class Car implements IRecord<Car> {
                 "meno='" + meno + '\'' +
                 ", priezvisko='" + priezvisko + '\'' +
                 ", id=" + id +
-                ", ECV='" + ECV + '\'' +
-                ", zaznamy=" + Arrays.toString(zaznamy) +
-                '}';
+                ", ECV='" + ECV + '\'';
     }
 
     @Override
     public boolean equal(Car other) {
-        return this.id == other.id || Objects.equals(this.ECV, other.ECV);
+        return this.id == other.id || this.ECV.equals(other.ECV);
     }
 
     @Override
