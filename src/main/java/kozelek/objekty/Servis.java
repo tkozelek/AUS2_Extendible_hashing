@@ -5,32 +5,40 @@ import kozelek.interfaces.IRecord;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 
 public class Servis implements IRecord<Servis> {
     private Date datum;
     private double cena;
-    private String[] popis;
+    private ArrayList<String> popis;
 
     public Servis() {
-    }
-
-    public Servis(Date datum, double cena, String[] popis) {
-        this.datum = datum;
-        this.cena = cena;
-        this.popis = popis;
     }
 
     public Servis(Date datum, double cena) {
         this.datum = datum;
         this.cena = cena;
-        this.popis = new String[Helper.MAX_POPIS_POCET];
+        this.popis = new ArrayList<>();
+    }
+
+    public void addPopis(String popis) {
+        this.popis.add(popis);
+    }
+
+    public void setPopis(int index, String popis) {
+        this.popis.set(index, popis);
+    }
+
+    public String getPopis(int index) {
+        return this.popis.get(index);
     }
 
     @Override
     public int getSize() {
-        // datum + cena
-        return Helper.VELKOST_LONG + Helper.VELKOST_LONG + Helper.MAX_POPIS_POCET * (1 + Helper.MAX_POPIS_DLZKA);
+        // datum + cena + POCETPOPISOV * (BYTE + DLZKAPOPISOV)
+        return Helper.VELKOST_LONG + Helper.VELKOST_DOUBLE + (Helper.MAX_POPIS_POCET * (Helper.VELKOST_BYTE + Helper.MAX_POPIS_DLZKA));
     }
 
     @Override
@@ -39,8 +47,14 @@ public class Servis implements IRecord<Servis> {
             DataOutputStream dataStream = new DataOutputStream(byteStream);
             dataStream.writeLong(datum.getTime());
             dataStream.writeDouble(cena);
+
             for (int i = 0; i < Helper.MAX_POPIS_POCET; i++) {
-                Helper.writeString(dataStream, popis[i], Helper.MAX_POPIS_DLZKA);
+                if (i < popis.size()) {
+                    Helper.writeString(dataStream, popis.get(i), Helper.MAX_POPIS_DLZKA);
+                } else {
+                    Helper.writeString(dataStream, null, Helper.MAX_POPIS_DLZKA);
+
+                }
             }
 
             return byteStream.toByteArray();
@@ -60,15 +74,13 @@ public class Servis implements IRecord<Servis> {
 
             this.datum = new Date(dataStream.readLong());
             this.cena = dataStream.readDouble();
-            this.popis = new String[Helper.MAX_POPIS_POCET];
+            this.popis = new ArrayList<>();
             for (int i = 0; i < Helper.MAX_POPIS_POCET; i++) {
-                this.popis[i] = Helper.readString(dataStream, Helper.MAX_POPIS_DLZKA);
+                this.popis.add(Helper.readString(dataStream, Helper.MAX_POPIS_DLZKA));
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-
     }
 
     @Override
@@ -79,5 +91,15 @@ public class Servis implements IRecord<Servis> {
     @Override
     public Servis createInstance() {
         return new Servis();
+    }
+
+
+    @Override
+    public String toString() {
+        return "Servis{" +
+                "datum=" + datum +
+                ", cena=" + cena +
+                ", popis=" + popis +
+                '}';
     }
 }

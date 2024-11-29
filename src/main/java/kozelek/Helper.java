@@ -18,6 +18,7 @@ public class Helper {
 
     // velkosti
     public static final int VELKOST_LONG = Long.BYTES;
+    public static final int VELKOST_DOUBLE = Double.BYTES;
     public static final int VELKOST_INTEGER = Integer.BYTES;
     public static final int VELKOST_BYTE = Byte.BYTES;
 
@@ -65,7 +66,11 @@ public class Helper {
             if (length > 0) {
                 byte[] bytes = new byte[maxLengthOfString];
                 dataStream.readFully(bytes);
-                return new String(bytes, StandardCharsets.UTF_8).substring(0, length);
+                String str = new String(bytes, StandardCharsets.UTF_8);
+                if (length >= 20)
+                    System.out.println("a");
+                str = str.substring(0, length);
+                return str;
             } else {
                 dataStream.skipBytes(maxLengthOfString);
                 return null;

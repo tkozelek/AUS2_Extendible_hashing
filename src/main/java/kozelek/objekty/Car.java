@@ -7,6 +7,7 @@ import kozelek.interfaces.IRecord;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Objects;
@@ -16,7 +17,7 @@ public class Car implements IRecord<Car> {
     private String priezvisko;
     private int id;
     private String ECV;
-    private Servis[] zaznamy;
+    private ArrayList<Servis> zaznamy;
 
     public Car() {
     }
@@ -26,7 +27,11 @@ public class Car implements IRecord<Car> {
         this.priezvisko = priezvisko;
         this.id = id;
         this.ECV = ECV;
-        this.zaznamy = new Servis[Helper.MAX_POCET_SERVISOV];
+        this.zaznamy = new ArrayList<>();
+    }
+
+    public void addZaznam(Servis servis) {
+        zaznamy.add(servis);
     }
 
     @Override
@@ -34,8 +39,8 @@ public class Car implements IRecord<Car> {
         return Helper.VELKOST_BYTE + Helper.MAX_MENO + // meno
                 Helper.VELKOST_BYTE + Helper.MAX_PRIEZVISKO + // priezvisko
                 Helper.VELKOST_INTEGER + // id
-                Helper.VELKOST_BYTE + Helper.MAX_ECV; //+ // ecv
-                //(Helper.MAX_POCET_SERVISOV * new Servis().getSize());
+                Helper.VELKOST_BYTE + Helper.MAX_ECV + // ecv
+                (Helper.MAX_POCET_SERVISOV * new Servis().getSize());
     }
 
     @Override
@@ -54,18 +59,22 @@ public class Car implements IRecord<Car> {
             // byte _ ECV
             Helper.writeString(dataStream, ECV, Helper.MAX_ECV);
 
-//            // byte pocet zaznamov
-//            dataStream.writeByte(zaznamy.length);
-//
-//            for (Servis s : zaznamy) {
-//                if (s != null) {
-//                    byte[] bytes = s.toByteArray();
-//                    dataStream.writeInt(bytes.length);
-//                    dataStream.write(bytes);
-//                } else {
-//                    dataStream.writeInt(0);
-//                }
-//            }
+            // byte pocet zaznamov
+            dataStream.writeByte(zaznamy.size());
+            int size = new Servis().getSize();
+
+            for (int i = 0; i < Helper.MAX_POCET_SERVISOV; i++) {
+                if (i < zaznamy.size()) {
+                    byte[] bytes = zaznamy.get(i).toByteArray();
+                    dataStream.writeInt(bytes.length);
+                    dataStream.write(bytes);
+                } else {
+                    dataStream.writeInt(0);
+                    for (int j = 0; j < size; j++) {
+                        dataStream.writeByte(0);
+                    }
+                }
+            }
 
             return byteStream.toByteArray();
         } catch (IOException e) {
@@ -90,27 +99,23 @@ public class Car implements IRecord<Car> {
 
             this.ECV = Helper.readString(dataStream, Helper.MAX_ECV);
 
-//            int visitCount = dataStream.readByte();
-//            this.zaznamy = new Servis[visitCount];
-//
-//            for (int i = 0; i < visitCount; i++) {
-//                int length = dataStream.readInt();
-//                if (length > 0) {
-//                    byte[] byteArray = new byte[length];
-//                    dataStream.read(byteArray);
-//                    Servis servis = new Servis();
-//                    servis.fromByteArray(byteArray);
-//                    zaznamy[i] = servis;
-//                } else {
-//                    zaznamy[i] = null;
-//                }
-//            }
+            int visitCount = dataStream.readByte();
+            this.zaznamy = new ArrayList<>();
+
+            Servis servis = new Servis();
+            for (int i = 0; i < Helper.MAX_POCET_SERVISOV; i++) {
+                byte[] recordBytes = new byte[servis.getSize()];
+                dataStream.readFully(recordBytes);
+
+                if (i < visitCount) {
+                    servis.fromByteArray(recordBytes);
+                    this.zaznamy.add(servis);
+                }
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
-
-
 
     @Override
     public String toString() {
@@ -118,7 +123,9 @@ public class Car implements IRecord<Car> {
                 "meno='" + meno + '\'' +
                 ", priezvisko='" + priezvisko + '\'' +
                 ", id=" + id +
-                ", ECV='" + ECV + '\'';
+                ", ECV='" + ECV + '\'' +
+                ", zaznamy=" + zaznamy +
+                '}';
     }
 
     @Override
