@@ -1,46 +1,66 @@
 package kozelek.objekty;
 
-import jdk.jshell.spi.ExecutionControl;
 import kozelek.Helper;
-import kozelek.interfaces.IByteData;
 import kozelek.interfaces.IRecord;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Objects;
 
 public class Car implements IRecord<Car> {
     private String meno;
     private String priezvisko;
     private int id;
     private String ECV;
-    private ArrayList<Servis> zaznamy;
+    // max 5 záznamov
+    private ArrayList<Servis> servisy;
+    private Servis servisInstance;
 
     public Car() {
+        this.servisInstance = new Servis();
     }
 
     public Car(String meno, String priezvisko, int id, String ECV) {
-        this.meno = meno;
-        this.priezvisko = priezvisko;
+        this.setMeno(meno);
+        this.setPriezvisko(priezvisko);
         this.id = id;
-        this.ECV = ECV;
-        this.zaznamy = new ArrayList<>();
+        this.setECV(ECV);
+        this.servisy = new ArrayList<>();
+        this.servisInstance = new Servis();
     }
 
     public void addZaznam(Servis servis) {
-        zaznamy.add(servis);
+        servisy.add(servis);
+    }
+
+    public void setMeno(String meno) {
+        if (meno.length() > Helper.MAX_MENO)
+            throw new IllegalArgumentException("String longer than should be, NAME: " + meno);
+        this.meno = meno;
+    }
+
+    public void setPriezvisko(String priezvisko) {
+        if (priezvisko.length() > Helper.MAX_PRIEZVISKO)
+            throw new IllegalArgumentException("String longer than should be, PRIEZIVKOS: " + priezvisko);
+        this.priezvisko = priezvisko;
+    }
+
+    public void setECV(String ECV) {
+        if (ECV.length() > Helper.MAX_ECV)
+            throw new IllegalArgumentException("String longer than should be, ECV: " + ECV);
+        this.ECV = ECV;
     }
 
     @Override
     public int getSize() {
+        // 1 + 15
+        // 1 + 20
+        // 4
+        // 1 + 10
         return Helper.VELKOST_BYTE + Helper.MAX_MENO + // meno
                 Helper.VELKOST_BYTE + Helper.MAX_PRIEZVISKO + // priezvisko
                 Helper.VELKOST_INTEGER + // id
-                Helper.VELKOST_BYTE + Helper.MAX_ECV + // ecv
-                (Helper.MAX_POCET_SERVISOV * new Servis().getSize());
+                Helper.VELKOST_BYTE + Helper.MAX_ECV
+                + Helper.VELKOST_BYTE + (Helper.MAX_POCET_SERVISOV * this.servisInstance.getSize());
     }
 
     @Override
@@ -59,20 +79,16 @@ public class Car implements IRecord<Car> {
             // byte _ ECV
             Helper.writeString(dataStream, ECV, Helper.MAX_ECV);
 
-            // byte pocet zaznamov
-            dataStream.writeByte(zaznamy.size());
-            int size = new Servis().getSize();
+            int size = this.servisInstance.getSize();
 
+            // pocet servisov
+            dataStream.writeByte(servisy.size());
             for (int i = 0; i < Helper.MAX_POCET_SERVISOV; i++) {
-                if (i < zaznamy.size()) {
-                    byte[] bytes = zaznamy.get(i).toByteArray();
-                    dataStream.writeInt(bytes.length);
+                if (i < servisy.size()) {
+                    byte[] bytes = servisy.get(i).toByteArray();
                     dataStream.write(bytes);
                 } else {
-                    dataStream.writeInt(0);
-                    for (int j = 0; j < size; j++) {
-                        dataStream.writeByte(0);
-                    }
+                    dataStream.write(new byte[size]);
                 }
             }
 
@@ -92,30 +108,32 @@ public class Car implements IRecord<Car> {
             DataInputStream dataStream = new DataInputStream(byteStream);
 
             this.meno = Helper.readString(dataStream, Helper.MAX_MENO);
-
             this.priezvisko = Helper.readString(dataStream, Helper.MAX_PRIEZVISKO);
-
             this.id = dataStream.readInt();
-
             this.ECV = Helper.readString(dataStream, Helper.MAX_ECV);
 
-            int visitCount = dataStream.readByte();
-            this.zaznamy = new ArrayList<>();
 
-            Servis servis = new Servis();
+            this.servisy = new ArrayList<>();
+
+            byte pocetServisov = dataStream.readByte();
             for (int i = 0; i < Helper.MAX_POCET_SERVISOV; i++) {
-                byte[] recordBytes = new byte[servis.getSize()];
-                dataStream.readFully(recordBytes);
+                if (i < pocetServisov) {
+                    byte[] recordBytes = new byte[this.servisInstance.getSize()];
+                    dataStream.readFully(recordBytes);
 
-                if (i < visitCount) {
+                    Servis servis = new Servis();
                     servis.fromByteArray(recordBytes);
-                    this.zaznamy.add(servis);
+                    this.servisy.add(servis);
+                } else {
+                    dataStream.skipBytes(this.servisInstance.getSize());
                 }
+
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error, car frombytearray", e);
         }
     }
+
 
     @Override
     public String toString() {
@@ -124,7 +142,7 @@ public class Car implements IRecord<Car> {
                 ", priezvisko='" + priezvisko + '\'' +
                 ", id=" + id +
                 ", ECV='" + ECV + '\'' +
-                ", zaznamy=" + zaznamy +
+                ", zaznamy=" + servisy +
                 '}';
     }
 

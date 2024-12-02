@@ -157,7 +157,7 @@ public class Block<T extends IRecord<T>> implements IByteData {
             // pocet platnych
             this.validCount = dataStream.readInt();
 
-            this.records.clear();
+            this.records = new ArrayList<>();
             for (int i = 0; i < this.maxRecordCount; i++) {
                 byte[] recordBytes = new byte[this.instance.getSize()];
                 dataStream.readFully(recordBytes);

@@ -4,26 +4,31 @@ import kozelek.Helper;
 import kozelek.interfaces.IRecord;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 
 public class Servis implements IRecord<Servis> {
-    private Date datum;
+    private LocalDate datum;
     private double cena;
     private ArrayList<String> popis;
 
     public Servis() {
+        this.popis = new ArrayList<>();
     }
 
-    public Servis(Date datum, double cena) {
+    public Servis(LocalDate datum, double cena) {
         this.datum = datum;
         this.cena = cena;
         this.popis = new ArrayList<>();
     }
 
     public void addPopis(String popis) {
+        if (popis.length() > Helper.MAX_POPIS_DLZKA) {
+            throw new IllegalArgumentException("Popis size too large");
+        }
         this.popis.add(popis);
     }
 
@@ -37,54 +42,68 @@ public class Servis implements IRecord<Servis> {
 
     @Override
     public int getSize() {
-        // datum + cena + POCETPOPISOV * (BYTE + DLZKAPOPISOV)
-        return Helper.VELKOST_LONG + Helper.VELKOST_DOUBLE + (Helper.MAX_POPIS_POCET * (Helper.VELKOST_BYTE + Helper.MAX_POPIS_DLZKA));
+        return Helper.VELKOST_INTEGER + 2 * Helper.VELKOST_BYTE +
+                Helper.VELKOST_DOUBLE +
+                (Helper.MAX_POPIS_POCET * (Helper.VELKOST_BYTE + Helper.MAX_POPIS_DLZKA));
     }
 
     @Override
     public byte[] toByteArray() {
-        try(ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
+        try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
             DataOutputStream dataStream = new DataOutputStream(byteStream);
-            dataStream.writeLong(datum.getTime());
+
+            dataStream.writeInt(datum.getYear());
+            dataStream.writeByte(datum.getMonthValue());
+            dataStream.writeByte(datum.getDayOfMonth());
+
             dataStream.writeDouble(cena);
 
             for (int i = 0; i < Helper.MAX_POPIS_POCET; i++) {
-                if (i < popis.size()) {
+                if (i < popis.size() && popis.get(i) != null) {
                     Helper.writeString(dataStream, popis.get(i), Helper.MAX_POPIS_DLZKA);
                 } else {
-                    Helper.writeString(dataStream, null, Helper.MAX_POPIS_DLZKA);
-
+                    dataStream.writeByte(0);
+                    dataStream.write(new byte[Helper.MAX_POPIS_DLZKA]);
                 }
             }
 
             return byteStream.toByteArray();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error servis tobytearray", e);
         }
     }
 
     @Override
     public void fromByteArray(byte[] bytes) {
-        if (this.getSize() != bytes.length) {
-            throw new RuntimeException("Size mismatch");
+        if (bytes == null || bytes.length != this.getSize()) {
+            throw new IllegalArgumentException("Invalid byte array size");
         }
 
         try (ByteArrayInputStream byteStream = new ByteArrayInputStream(bytes)) {
             DataInputStream dataStream = new DataInputStream(byteStream);
 
-            this.datum = new Date(dataStream.readLong());
+            int year = dataStream.readInt();
+            int month = dataStream.readByte();
+            int day = dataStream.readByte();
+            this.datum = LocalDate.of(year, month, day);
+
             this.cena = dataStream.readDouble();
+
             this.popis = new ArrayList<>();
             for (int i = 0; i < Helper.MAX_POPIS_POCET; i++) {
-                this.popis.add(Helper.readString(dataStream, Helper.MAX_POPIS_DLZKA));
+                String description = Helper.readString(dataStream, Helper.MAX_POPIS_DLZKA);
+                if (description != null) {
+                    this.popis.add(description);
+                }
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error servis, frombytearray", e);
         }
     }
 
     @Override
     public boolean equal(Servis other) {
+        if (other == null) return false;
         return this.datum.equals(other.datum);
     }
 
@@ -93,11 +112,10 @@ public class Servis implements IRecord<Servis> {
         return new Servis();
     }
 
-
     @Override
     public String toString() {
         return "Servis{" +
-                "datum=" + datum +
+                "datum=" + datum.getDayOfMonth() + "." + datum.getMonthValue() + "." + datum.getYear() +
                 ", cena=" + cena +
                 ", popis=" + popis +
                 '}';

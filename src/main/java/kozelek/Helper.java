@@ -38,14 +38,10 @@ public class Helper {
                 dataStream.writeByte(bytes.length);
                 dataStream.write(bytes);
                 // dopln text
-                for (int i = 0; i < (maxLengthOfString - bytes.length); i++) {
-                    dataStream.writeByte(0);
-                }
+                dataStream.write(new byte[maxLengthOfString - bytes.length]);
             } else {
                 dataStream.writeByte(0);
-                for (int i = 0; i < maxLengthOfString; i++) {
-                    dataStream.writeByte(0);
-                }
+                dataStream.write(new byte[maxLengthOfString]);
             }
         } catch (Exception e) {
             throw new RuntimeException("Error writing string", e);
@@ -67,8 +63,6 @@ public class Helper {
                 byte[] bytes = new byte[maxLengthOfString];
                 dataStream.readFully(bytes);
                 String str = new String(bytes, StandardCharsets.UTF_8);
-                if (length >= 20)
-                    System.out.println("a");
                 str = str.substring(0, length);
                 return str;
             } else {
