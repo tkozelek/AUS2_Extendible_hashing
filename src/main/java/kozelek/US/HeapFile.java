@@ -34,6 +34,7 @@ public class HeapFile<T extends IRecord<T>> {
         }
         block = this.loadBlock(index);
         boolean wasEmpty = block.getValidCount() == 0;
+
         if (block.addRecord(record)) {
             if (wasEmpty && block.isFull()) {
                 handleInsertionIntoEmptyBlockBecomesFull(index);
@@ -84,6 +85,7 @@ public class HeapFile<T extends IRecord<T>> {
             this.fileManager.writeBlock(index * block.getSize(), block);
         }
     }
+
 
     /**
      * Block je prazdny po vložení sa stane plnym
@@ -258,7 +260,7 @@ public class HeapFile<T extends IRecord<T>> {
 
     /**
      * Metoda načíta block na indexe
-     * @param index - index kde sa nachádza block v súbore
+     * @param index index kde sa nachádza block v súbore
      * @return Block<T>, načítaný block
      */
     private Block<T> loadBlock(int index) {

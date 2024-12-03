@@ -20,7 +20,7 @@ class HeapFileTest {
     private ArrayList<TestRecord> records;
     private ArrayList<Integer> indexes;
 
-    private final int pocet = 10000;
+    private final int pocet = 20000;
     private final int pocetDelete = 5000;
 
     @BeforeEach
