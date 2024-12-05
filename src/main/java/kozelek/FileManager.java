@@ -1,6 +1,6 @@
 package kozelek;
 
-import kozelek.US.Block;
+import kozelek.US.heap.Block;
 import kozelek.interfaces.IRecord;
 
 import java.io.File;
@@ -8,19 +8,16 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 public class FileManager<T extends IRecord<T>> {
-    private File file;
-    private RandomAccessFile raf;
+    private final File file;
+    private final RandomAccessFile raf;
 
     public FileManager(String nazovSuboru) {
         this.file = new File(nazovSuboru);
 
         try {
-            // vytvori subor ak neexistuje
-            if (this.file.exists()) {
-                this.file.delete();
+            if (!this.file.exists()) {
+                this.file.createNewFile();
             }
-            this.file.createNewFile();
-
             this.raf = new RandomAccessFile(this.file, "rw");
         }  catch (IOException e) {
             throw new RuntimeException(e);
@@ -93,5 +90,9 @@ public class FileManager<T extends IRecord<T>> {
         } catch (IOException e) {
             throw new RuntimeException("Chyba pri skracovaní suboru", e);
         }
+    }
+
+    public String getFileName() {
+        return this.file.getName();
     }
 }

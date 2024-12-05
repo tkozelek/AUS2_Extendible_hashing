@@ -67,4 +67,11 @@ public class CarId implements IHashableData<CarId> {
             throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public String toString() {
+        return "CarId{" +
+                "carId=" + carId +
+                '}';
+    }
 }

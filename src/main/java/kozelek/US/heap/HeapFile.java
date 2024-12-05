@@ -1,17 +1,18 @@
-package kozelek.US;
+package kozelek.US.heap;
 
 import kozelek.FileManager;
 import kozelek.interfaces.IRecord;
 
+import java.io.*;
 import java.util.ArrayList;
 
 public class HeapFile<T extends IRecord<T>> {
     private int recordCount;
-    private Class<T> recordClass;
+    private final Class<T> recordClass;
     private int indexEmptyBlock;
     private int indexPartialBlock;
 
-    private FileManager<T> fileManager;
+    private final FileManager<T> fileManager;
     private Block<T> block;
 
     public HeapFile(String fileName, int recordCount, Class<T> recordClass) {
@@ -19,10 +20,17 @@ public class HeapFile<T extends IRecord<T>> {
         this.recordClass = recordClass;
         this.fileManager = new FileManager<>(fileName);
 
+
         this.block = new Block<>(recordCount, recordClass);
 
         this.indexEmptyBlock = -1;
         this.indexPartialBlock = -1;
+        this.loadState();
+    }
+
+    public HeapFile(String fileName, Class<T> recordClass) {
+        this(fileName, 0, recordClass);
+        this.loadState();
     }
 
     public int insert(T record) {
@@ -263,7 +271,7 @@ public class HeapFile<T extends IRecord<T>> {
      * @param index index kde sa nachádza block v súbore
      * @return Block<T>, načítaný block
      */
-    private Block<T> loadBlock(int index) {
+    public Block<T> loadBlock(int index) {
         byte[] bytes = this.fileManager.readBytes(index * block.getSize(), block.getSize());
         Block<T> loadedBlock = new Block<>(recordCount, recordClass);
         loadedBlock.fromByteArray(bytes);
@@ -385,6 +393,10 @@ public class HeapFile<T extends IRecord<T>> {
     }
 
     public int getRecordCount() {
+        return recordCount;
+    }
+
+    public int getCountOfAllRecords() {
         ArrayList<Block<T>> blocks = this.getAllBlocks();
         int sum = 0;
         for (Block<T> block : blocks) {
@@ -411,5 +423,62 @@ public class HeapFile<T extends IRecord<T>> {
 
     public boolean partialExists() {
         return this.indexPartialBlock != -1;
+    }
+
+    public void saveState() {
+        File file = new File(this.fileManager.getFileName() + "state");
+
+        if (file.exists()) {
+            file.delete();
+        }
+        try {
+            file.createNewFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            writer.write(indexEmptyBlock + "\n");
+            writer.write(indexPartialBlock + "\n");
+            writer.write(recordCount + "\n");
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void loadState() {
+        File file = new File(this.fileManager.getFileName() + "state");
+
+        if (!file.exists()) {
+            return;
+        }
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            this.indexEmptyBlock = Integer.parseInt(reader.readLine());
+            this.indexPartialBlock = Integer.parseInt(reader.readLine());
+            this.recordCount = Integer.parseInt(reader.readLine());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Class<T> getRecordClass() {
+        return recordClass;
+    }
+
+    public int getIndexEmptyBlock() {
+        return indexEmptyBlock;
+    }
+
+    public int getIndexPartialBlock() {
+        return indexPartialBlock;
+    }
+
+    public FileManager<T> getFileManager() {
+        return fileManager;
+    }
+
+    public Block<T> getBlock() {
+        return block;
     }
 }

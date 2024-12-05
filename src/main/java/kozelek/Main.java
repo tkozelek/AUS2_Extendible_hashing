@@ -1,53 +1,62 @@
 package kozelek;
 
-import kozelek.US.HeapFile;
-import kozelek.US.Block;
+import kozelek.US.hash.ExtendibleHashing;
+import kozelek.US.heap.HeapFile;
 import kozelek.objekty.Car;
+import kozelek.objekty.HashObjekty.CarId;
+import kozelek.objekty.HashObjekty.CarSPZ;
 import kozelek.objekty.Servis;
-import kozelek.objekty.Test;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.BitSet;
 import java.util.Random;
 
 public class Main {
+
     public static void main(String[] args) {
+        ExtendibleHashing<CarId> ext = new ExtendibleHashing<>("carid.bin", CarId.class, 3);
+        ExtendibleHashing<CarSPZ> extSPZ = new ExtendibleHashing<>("carspz.bin", CarSPZ.class, 3);
 
-        Random rand = new Random();
-
-        int blokovacifaktor = 3;
-
-        Servis sr = new Servis();
-        Car cr = new Car();
-        int servisSize = sr.getSize();
-        int carSize = cr.getSize();
-
-        System.out.printf("%d %d\n", servisSize * 5, carSize);
-
-
-        HeapFile<Car> heap = new HeapFile<>("heapfile.bin", blokovacifaktor, Car.class);
-        ArrayList<Car> cars = new ArrayList<>();
-        ArrayList<Integer> indexes = new ArrayList<>();
-
-        for (int i = 0; i < 10; i++) {
-            Car car = new Car("meno", "priezvisko", 1, "SPZSOA");
-            Servis servis = new Servis(LocalDate.now(), 565.0);
-            servis.addPopis("oprava kolesa");
-            servis.addPopis("oprava kolesa");
-            servis.addPopis("oprava kolesa");
-            car.addZaznam(servis);
-            cars.add(car);
-
-            heap.insert(car);
+        for (int i = 1; i < 11; i++) {
+            CarId carId = new CarId(i, i);
+            ext.insert(carId);
         }
 
+        System.out.println();
+        ext.printAll();
 
-        heap.printAll();
-        System.out.println(heap);
-        System.out.println(cars.size());
-        System.out.println(heap.getRecordCount());
+        System.out.println();
 
-        heap.closeFileManager();
+
+//        Random rand = new Random();
+//
+//        int blokovacifaktor = 3;
+//
+//
+//        HeapFile<Car> heap = new HeapFile<>("heapfilee.bin", 5, Car.class);
+//        ArrayList<Car> cars = new ArrayList<>();
+//        ArrayList<Integer> indexes = new ArrayList<>();
+//
+//        for (int i = 0; i < 134; i++) {
+//            Car car = new Car("meno" + i, "priezvisko" + i, i, "SP" + i);
+//            Servis servis = new Servis(LocalDate.now(), 565.0);
+//            servis.addPopis("oprava kolesa");
+//            servis.addPopis("oprava kolesa");
+//            servis.addPopis("oprava kolesa");
+//            car.addZaznam(servis);
+//            cars.add(car);
+//
+//            int a = heap.insert(car);
+//            indexes.add(a);
+//        }
+//
+//        heap.printAll();
+//        System.out.println(heap);
+//        System.out.println(cars.size());
+//        System.out.println(heap.getRecordCount());
+//
+//        heap.saveState();
+//        heap.closeFileManager();
     }
 }

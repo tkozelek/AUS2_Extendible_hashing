@@ -1,11 +1,10 @@
-package kozelek.US;
+package kozelek.US.heap;
 
 import kozelek.Helper;
 import kozelek.interfaces.IByteData;
 import kozelek.interfaces.IRecord;
 
 import java.io.*;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -29,7 +28,7 @@ public class Block<T extends IRecord<T>> implements IByteData {
         this.instance = createInstance();
     }
 
-    private T createInstance() {
+    public T createInstance() {
         try {
             return recordClass.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
@@ -68,6 +67,19 @@ public class Block<T extends IRecord<T>> implements IByteData {
                 return;
             }
         }
+    }
+
+    public ArrayList<T> getRecords() {
+        return this.records;
+    }
+
+    public void setRecords(ArrayList<T> records) {
+        this.records = records;
+    }
+
+    public void clearRecords() {
+        this.validCount = 0;
+        this.records.clear();
     }
 
     public T getRecord(T record) {
@@ -116,6 +128,14 @@ public class Block<T extends IRecord<T>> implements IByteData {
         }
         // neexistuje
         return false;
+    }
+
+    public void setValidCount(int validCount) {
+        this.validCount = validCount;
+    }
+
+    public T getInstance() {
+        return instance;
     }
 
     @Override

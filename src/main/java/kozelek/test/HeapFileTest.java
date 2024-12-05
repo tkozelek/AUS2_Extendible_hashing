@@ -1,7 +1,7 @@
 package kozelek.test;
 
 import kozelek.Helper;
-import kozelek.US.HeapFile;
+import kozelek.US.heap.HeapFile;
 import kozelek.interfaces.IRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

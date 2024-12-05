@@ -4,6 +4,7 @@ import kozelek.Helper;
 import kozelek.interfaces.IHashableData;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.BitSet;
 
 public class CarSPZ implements IHashableData<CarSPZ> {
@@ -20,7 +21,12 @@ public class CarSPZ implements IHashableData<CarSPZ> {
 
     @Override
     public BitSet getHash() {
-        return null;
+        byte[] ecvBytes = ECV.getBytes();
+
+        int start = Math.max(0, ecvBytes.length - 4);
+
+        byte[] lastBytes = Arrays.copyOfRange(ecvBytes, start, ecvBytes.length);
+        return BitSet.valueOf(lastBytes);
     }
 
     @Override
@@ -60,8 +66,9 @@ public class CarSPZ implements IHashableData<CarSPZ> {
 
             this.ECV = Helper.readString(dataStream, Helper.MAX_ECV);
             this.address = dataStream.readInt();
+
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error frombytearray", e);
         }
     }
 }
