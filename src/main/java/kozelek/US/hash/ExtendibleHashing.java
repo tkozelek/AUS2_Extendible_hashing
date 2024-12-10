@@ -71,9 +71,9 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
             newBlockIndex = Collections.max(directory) + 1;
         }
 
-        int splitMask = 1 << localDepth;
+        int split = 1 << localDepth;
         for (int i = 0; i < directory.size(); i++) {
-            if (directory.get(i) == blockIndex && (i & splitMask) != 0) {
+            if (directory.get(i) == blockIndex && (i & split) != 0) {
                 directory.set(i, newBlockIndex);
             }
         }
@@ -237,9 +237,12 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
 
     public void edit(T oldRecord, T newRecord) {
         // rovnaky kluc, len vymenime data
+        int index = getIndex(oldRecord.getHash());
+        int blockIndex = this.directory.get(index);
         if (oldRecord.equal(newRecord)) {
             this.block = getBlock(oldRecord);
             this.block.edit(oldRecord, newRecord);
+            getFileManager().writeBlock(blockIndex * block.getSize(), block);
         } else {
             this.delete(oldRecord);
             this.insert(newRecord);

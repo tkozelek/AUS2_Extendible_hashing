@@ -146,12 +146,14 @@ public class HeapFile<T extends IRecord<T>> {
     private void handleInsertionIntoEmptyBlock(int blockIndex) {
         if (block.getNext() != -1) {
             insertionIntoEmptyBlockIfBlockHasNext();
+            // 2 pristupy
         } else {
             this.indexEmptyBlock = -1;
         }
         // ak neni plny nastavíme ho na partial
         if (block.getValidCount() != block.getMaxRecordCount() && indexPartialBlock != -1)
             updatePartialBlockChain(blockIndex);
+        // 2 zapisy
         else
             indexPartialBlock = blockIndex;
     }

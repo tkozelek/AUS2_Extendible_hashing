@@ -117,7 +117,7 @@ class ExtendibleHashingTest {
     @Test
     void testRandomOperations() {
         int init = 0;
-        int numberOfRandomOperations = 3;
+        int numberOfRandomOperations = 4;
         for (int i = 0; i < init; i++) {
             TestRecord test = new TestRecord(i, "Record " + i);
             ext.insert(test);
@@ -156,36 +156,32 @@ class ExtendibleHashingTest {
                         j--;
                     }
                     continue;
-//                case 2: // edit
-//                    if (!records.isEmpty()) {
-//                        TestRecord edited = new TestRecord(j + 10000, "edited " + j);
-//
-//                        int index = rand.nextInt(this.records.size());
-//                        TestRecord toEdit = this.records.remove(index);
-//                        int indexBlock = indexes.remove(index);
-//
-//                        ext.edit(indexBlock, toEdit, edited);
-//
-//                        this.records.add(edited);
-//                        this.indexes.add(indexBlock);
-//
-//                        TestRecord notFound = null;
-//                        try {
-//                            notFound = this.ext.getRecord(indexBlock, toEdit);
-//                        } catch (RuntimeException e) {
-//                            System.out.println(edited);
-//                            System.out.printf("%d %s", indexBlock, toEdit);
-//                        }
-//                        TestRecord found = this.ext.getRecord(indexBlock, edited);
-//
-//                        assertNull(notFound);
-//                        assertNotNull(found, " " + index + " " + indexBlock);
-//                        assertTrue(found.equal(edited));
-//                    } else {
-//                        j--;
-//                    }
-//                    continue;
-                case 2:
+                case 2: // edit
+                    if (!records.isEmpty()) {
+                        TestRecord edited = new TestRecord(j + 10000, "edited " + j);
+
+                        int index = rand.nextInt(this.records.size());
+                        TestRecord toEdit = this.records.remove(index);
+
+                        ext.edit(toEdit, edited);
+
+                        this.records.add(edited);
+
+                        TestRecord notFound = null;
+
+                        notFound = this.ext.getRecord(toEdit);
+                        assertNull(notFound);
+
+                        TestRecord found = this.ext.getRecord(edited);
+
+                        assertNull(notFound);
+                        assertNotNull(found);
+                        assertTrue(found.equal(edited));
+                    } else {
+                        j--;
+                    }
+                    continue;
+                case 3:
                     if (!records.isEmpty()) {
                         int index = rand.nextInt(this.records.size());
                         TestRecord toFind = this.records.get(index);
