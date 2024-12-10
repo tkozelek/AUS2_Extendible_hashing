@@ -8,11 +8,11 @@ import java.util.BitSet;
 
 public class CarId implements IHashableData<CarId> {
     private int carId;
-    private int adress;
+    private int address;
 
-    public CarId(int carId, int adress) {
+    public CarId(int carId, int address) {
         this.carId = carId;
-        this.adress = adress;
+        this.address = address;
     }
 
     public CarId() {
@@ -50,7 +50,7 @@ public class CarId implements IHashableData<CarId> {
             DataOutputStream dataStream = new DataOutputStream(byteStream);
 
             dataStream.writeInt(this.carId);
-            dataStream.writeInt(this.adress);
+            dataStream.writeInt(this.address);
 
             return byteStream.toByteArray();
         } catch (IOException e) {
@@ -65,7 +65,7 @@ public class CarId implements IHashableData<CarId> {
              DataInputStream dataStream = new DataInputStream(byteStream)) {
 
             this.carId = dataStream.readInt();
-            this.adress = dataStream.readInt();
+            this.address = dataStream.readInt();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -75,7 +75,7 @@ public class CarId implements IHashableData<CarId> {
     public String toString() {
         return "CId{" +
                 "Id=" + carId +
-                ", adr=" + adress +
+                ", adr=" + address +
                 '}';
     }
 
@@ -83,7 +83,7 @@ public class CarId implements IHashableData<CarId> {
         return carId;
     }
 
-    public int getAdress() {
-        return adress;
+    public int getAddress() {
+        return address;
     }
 }

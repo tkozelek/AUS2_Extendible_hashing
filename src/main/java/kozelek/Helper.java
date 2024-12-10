@@ -13,7 +13,7 @@ public class Helper {
     // car
     public static final int MAX_MENO = 15;
     public static final int MAX_PRIEZVISKO = 20;
-    public static final int MAX_ECV = 10;
+    public static final int MAX_SPZ = 10;
     public static final int MAX_POCET_SERVISOV = 5;
 
     // velkosti

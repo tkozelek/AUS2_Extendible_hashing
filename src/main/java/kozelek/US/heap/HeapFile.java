@@ -15,22 +15,21 @@ public class HeapFile<T extends IRecord<T>> {
     private final FileManager<T> fileManager;
     private Block<T> block;
 
-    public HeapFile(String fileName, int recordCount, Class<T> recordClass) {
+    public HeapFile(String fileName, Class<T> recordClass, int recordCount) {
         this.maxRecordCount = recordCount;
         this.recordClass = recordClass;
         this.fileManager = new FileManager<>(fileName);
 
-
-        this.block = new Block<>(recordCount, recordClass);
-
         this.indexEmptyBlock = -1;
         this.indexPartialBlock = -1;
-        this.loadState();
-    }
 
-    public HeapFile(String fileName, Class<T> recordClass) {
-        this(fileName, 0, recordClass);
         this.loadState();
+
+        if (maxRecordCount != -1)
+            this.block = new Block<>(maxRecordCount, recordClass);
+        else
+            this.block = new Block<>(recordCount, recordClass);
+
     }
 
     public int insert(T record) {
@@ -352,13 +351,8 @@ public class HeapFile<T extends IRecord<T>> {
         return tempBlock.getRecord(record);
     }
 
-    public Block<T> getBlock(int index, T record) {
-        Block<T> tempBlock = this.loadBlock(index);
-
-        if (tempBlock.contains(record))
-            return tempBlock;
-        else
-            return null;
+    public Block<T> getBlock(int index) {
+        return this.loadBlock(index);
     }
 
     public void edit(int index, T oldRecord, T newRecord) {
@@ -430,7 +424,16 @@ public class HeapFile<T extends IRecord<T>> {
     }
 
     public void saveState() {
-        File file = new File(this.fileManager.getFileName() + "state");
+        File exportsDir = new File("exports");
+        if (!exportsDir.exists()) {
+            try {
+                exportsDir.mkdir();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        File file = new File("exports/" + this.fileManager.getFileName() + "state");
 
         if (file.exists()) {
             file.delete();
@@ -452,7 +455,7 @@ public class HeapFile<T extends IRecord<T>> {
     }
 
     public void loadState() {
-        File file = new File(this.fileManager.getFileName() + "state");
+        File file = new File("exports/" + this.fileManager.getFileName() + "state");
 
         if (!file.exists()) {
             return;
@@ -461,6 +464,7 @@ public class HeapFile<T extends IRecord<T>> {
             this.indexEmptyBlock = Integer.parseInt(reader.readLine());
             this.indexPartialBlock = Integer.parseInt(reader.readLine());
             this.maxRecordCount = Integer.parseInt(reader.readLine());
+            this.block = new Block<>(maxRecordCount, this.recordClass);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -484,5 +488,9 @@ public class HeapFile<T extends IRecord<T>> {
 
     public Block<T> getBlock() {
         return block;
+    }
+
+    public void update(int index, Block<T> block) {
+        this.fileManager.writeBlock(index * block.getSize(), block);
     }
 }

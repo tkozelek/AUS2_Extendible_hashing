@@ -26,7 +26,7 @@ class HeapFileTest {
     @BeforeEach
     void setUp() {
         String tempFile = "testHeapFile.bin";
-        heap = new HeapFile<>(tempFile, recordCount, TestRecord.class);
+        heap = new HeapFile<>(tempFile, TestRecord.class, recordCount);
         rand = new Random();
 
         this.records = new ArrayList<>(pocet);

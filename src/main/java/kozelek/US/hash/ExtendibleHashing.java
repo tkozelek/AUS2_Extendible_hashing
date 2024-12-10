@@ -3,6 +3,7 @@ package kozelek.US.hash;
 import kozelek.US.heap.HeapFile;
 import kozelek.interfaces.IHashableData;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
@@ -16,16 +17,16 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
     private ArrayList<Integer> freeBlocks;
 
     public ExtendibleHashing(String filePath, Class<T> recordClass, int maxRecordCount) {
-        super(filePath, maxRecordCount, recordClass);
-
-        this.globalDepth = 1;
-        this.directory = new ArrayList<>();
-        this.freeBlocks = new ArrayList<>();
-
-        for (int i = 0; i < Math.pow(2, globalDepth); i++) {
-            this.directory.add(i);
-            HashBlock<T> block = new HashBlock<>(maxRecordCount, recordClass);
-            getFileManager().writeBlock(i * block.getSize(), block);
+        super(filePath, recordClass, maxRecordCount);
+        if (directory == null || directory.isEmpty()) {
+            this.globalDepth = 1;
+            this.freeBlocks = new ArrayList<>();
+            directory = new ArrayList<>();
+            for (int i = 0; i < Math.pow(2, globalDepth); i++) {
+                this.directory.add(i);
+                HashBlock<T> block = new HashBlock<>(maxRecordCount, recordClass);
+                getFileManager().writeBlock(i * block.getSize(), block);
+            }
         }
     }
 
@@ -45,7 +46,9 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
                 }
                 this.split(blockIndex, block);
             } else {
-                block.addRecord(data);
+                if (!block.addRecord(data)) {
+                    throw new RuntimeException("error inserting");
+                }
                 getFileManager().writeBlock(blockIndex * block.getSize(), block);
                 isInserted = true;
                 return blockIndex;
@@ -188,8 +191,8 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
 
                     toBlock.setLocalDepth(toBlock.getLocalDepth() - 1);
                     getFileManager().writeBlock(toIndex * toBlock.getSize(), toBlock);
-                    if (isLastBlockWithDepth(toBlock.getLocalDepth() + 1)) {
-                        halfDirectory();
+                    if (isLastBlockWithDepth(globalDepth)) {
+                        toIndex = halfDirectory(toIndex);
                     }
 
                     return toIndex;
@@ -213,25 +216,33 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
         return true;
     }
 
-    private void halfDirectory() {
+    private int halfDirectory(int toIndex) {
         int halfSize = directory.size() / 2;
-
+        int toReturn = 0;
         ArrayList<Integer> newDirectory = new ArrayList<>();
 
         for (int i = 0; i < halfSize; i++) {
             newDirectory.add(directory.get(i));
+            if (directory.get(i) == toIndex) {
+                toReturn = i;
+            }
         }
 
         directory.clear();
         directory.addAll(newDirectory);
 
         globalDepth--;
+        return toReturn;
+    }
 
-
-        for (int i = 0; i < directory.size(); i++) {
-            int blockIndex = directory.get(i);
-
-            directory.set(i, blockIndex % (1 << globalDepth));
+    public void edit(T oldRecord, T newRecord) {
+        // rovnaky kluc, len vymenime data
+        if (oldRecord.equal(newRecord)) {
+            this.block = getBlock(oldRecord);
+            this.block.edit(oldRecord, newRecord);
+        } else {
+            this.delete(oldRecord);
+            this.insert(newRecord);
         }
     }
 
@@ -303,6 +314,76 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
         for (int i : directory) {
             System.out.printf("%d %d\n", x, i);
             ++x;
+        }
+    }
+
+    public void saveState() {
+        File exportsDir = new File("exports");
+        if (!exportsDir.exists()) {
+            try {
+                exportsDir.mkdir();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        File file = new File("exports/" + getFileManager().getFileName() + "state");
+
+        if (file.exists()) {
+            file.delete();
+        }
+        try {
+            file.createNewFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            writer.write(globalDepth + "\n");
+
+            for (int i = 0; i < freeBlocks.size(); i++) {
+                if (i == freeBlocks.size() - 1) {
+                    writer.write(freeBlocks.get(i) + "");
+                } else {
+                    writer.write(freeBlocks.get(i) + ",");
+                }
+            }
+            writer.write("\n");
+            for (int i = 0; i < directory.size(); i++) {
+                if (i == directory.size() - 1) {
+                    writer.write(directory.get(i) + "");
+                } else {
+                    writer.write(directory.get(i) + ",");
+                }
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void loadState() {
+        File file = new File("exports/" + getFileManager().getFileName() + "state");
+
+        if (!file.exists()) {
+            return;
+        }
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            this.globalDepth = Integer.parseInt(reader.readLine());
+            this.directory = new ArrayList<>();
+            this.freeBlocks = new ArrayList<>();
+            String[] line = reader.readLine().split(",");
+            for (String s : line) {
+                if (!s.isEmpty())
+                    freeBlocks.add(Integer.parseInt(s));
+            }
+            line = reader.readLine().split(",");
+            for (String s : line) {
+                if (!s.isEmpty())
+                    directory.add(Integer.parseInt(s));
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 

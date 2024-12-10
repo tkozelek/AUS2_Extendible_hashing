@@ -92,7 +92,35 @@ public class FileManager<T extends IRecord<T>> {
         }
     }
 
+//    public void truncateFile(int bytesToRemove) {
+//        try {
+//            long currentLength = raf.length();
+//            long newLength = Math.max(0, currentLength - bytesToRemove);
+//
+//            if (newLength == 0) {
+//
+//                raf.setLength(0);
+//            } else {
+//                byte[] validData = new byte[(int) newLength];
+//                raf.seek(0);
+//                raf.readFully(validData);
+//
+//                raf.close();
+//                try (RandomAccessFile tempRaf = new RandomAccessFile(file, "rw")) {
+//                    tempRaf.setLength(0);
+//                    tempRaf.write(validData);
+//                }
+//            }
+//        } catch (IOException e) {
+//            throw new RuntimeException("Chyba pri skracovaní suboru", e);
+//        }
+//    }
+
     public String getFileName() {
         return this.file.getName();
+    }
+
+    public File getFile() {
+        return this.file;
     }
 }

@@ -10,13 +10,23 @@ public class Car implements IRecord<Car> {
     private String meno;
     private String priezvisko;
     private int id;
-    private String ECV;
+    private String SPZ;
     // max 5 záznamov
     private ArrayList<Servis> servisy;
     private Servis servisInstance;
 
     public Car() {
         this.servisInstance = new Servis();
+    }
+
+    public Car(int id) {
+        this.id = id;
+        this.SPZ = "";
+    }
+
+    public Car(String SPZ) {
+        this.SPZ = SPZ;
+        this.id = -10;
     }
 
     public Car(String meno, String priezvisko, int id, String ECV) {
@@ -28,8 +38,27 @@ public class Car implements IRecord<Car> {
         this.servisInstance = new Servis();
     }
 
-    public void addZaznam(Servis servis) {
-        servisy.add(servis);
+    public void addServis(Servis servis) {
+        if (servisy.size() < Helper.MAX_POCET_SERVISOV)
+            servisy.add(servis);
+        else
+            throw new RuntimeException("Auto ma plne servisy: " + this.id);
+    }
+
+    public void removeServis(Servis servis) {
+        servisy.remove(servis);
+    }
+
+    public String getMeno() {
+        return meno;
+    }
+
+    public String getPriezvisko() {
+        return priezvisko;
+    }
+
+    public ArrayList<Servis> getServisy() {
+        return servisy;
     }
 
     public void setMeno(String meno) {
@@ -45,9 +74,9 @@ public class Car implements IRecord<Car> {
     }
 
     public void setECV(String ECV) {
-        if (ECV.length() > Helper.MAX_ECV)
+        if (ECV.length() > Helper.MAX_SPZ)
             throw new IllegalArgumentException("String longer than should be, ECV: " + ECV);
-        this.ECV = ECV;
+        this.SPZ = ECV;
     }
 
     @Override
@@ -59,7 +88,7 @@ public class Car implements IRecord<Car> {
         return Helper.VELKOST_BYTE + Helper.MAX_MENO + // meno
                 Helper.VELKOST_BYTE + Helper.MAX_PRIEZVISKO + // priezvisko
                 Helper.VELKOST_INTEGER + // id
-                Helper.VELKOST_BYTE + Helper.MAX_ECV
+                Helper.VELKOST_BYTE + Helper.MAX_SPZ
                 + Helper.VELKOST_BYTE + (Helper.MAX_POCET_SERVISOV * this.servisInstance.getSize());
     }
 
@@ -77,7 +106,7 @@ public class Car implements IRecord<Car> {
             dataStream.writeInt(id);
 
             // byte _ ECV
-            Helper.writeString(dataStream, ECV, Helper.MAX_ECV);
+            Helper.writeString(dataStream, SPZ, Helper.MAX_SPZ);
 
             int size = this.servisInstance.getSize();
 
@@ -110,7 +139,7 @@ public class Car implements IRecord<Car> {
             this.meno = Helper.readString(dataStream, Helper.MAX_MENO);
             this.priezvisko = Helper.readString(dataStream, Helper.MAX_PRIEZVISKO);
             this.id = dataStream.readInt();
-            this.ECV = Helper.readString(dataStream, Helper.MAX_ECV);
+            this.SPZ = Helper.readString(dataStream, Helper.MAX_SPZ);
 
 
             this.servisy = new ArrayList<>();
@@ -137,18 +166,16 @@ public class Car implements IRecord<Car> {
 
     @Override
     public String toString() {
-        return "Car{" +
-                "meno='" + meno + '\'' +
+        return  "id=" + id +
+                ", SPZ='" + SPZ + '\'' +
+                ", meno='" + meno + '\'' +
                 ", priezvisko='" + priezvisko + '\'' +
-                ", id=" + id +
-                ", ECV='" + ECV + '\'' +
-                ", zaznamy=" + servisy +
-                '}';
+                ", serv.=" + servisy;
     }
 
     @Override
     public boolean equal(Car other) {
-        return this.id == other.id || this.ECV.equals(other.ECV);
+        return this.id == other.id || this.SPZ.equals(other.SPZ);
     }
 
     @Override
@@ -160,7 +187,7 @@ public class Car implements IRecord<Car> {
         return id;
     }
 
-    public String getECV() {
-        return ECV;
+    public String getSPZ() {
+        return SPZ;
     }
 }

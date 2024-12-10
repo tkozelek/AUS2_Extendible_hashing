@@ -8,20 +8,24 @@ import java.util.Arrays;
 import java.util.BitSet;
 
 public class CarSPZ implements IHashableData<CarSPZ> {
-    private String ECV;
+    private String SPZ;
     private int address;
 
-    public CarSPZ(String ECV, int address) {
-        this.ECV = ECV;
+    public CarSPZ(String SPZ, int address) {
+        this.SPZ = SPZ;
         this.address = address;
     }
 
     public CarSPZ() {
     }
 
+    public int getAddress() {
+        return address;
+    }
+
     @Override
     public BitSet getHash() {
-        byte[] ecvBytes = ECV.getBytes();
+        byte[] ecvBytes = SPZ.getBytes();
 
         int start = Math.max(0, ecvBytes.length - 4);
 
@@ -31,7 +35,7 @@ public class CarSPZ implements IHashableData<CarSPZ> {
 
     @Override
     public boolean equal(CarSPZ other) {
-        return this.ECV.equals(other.ECV);
+        return this.SPZ.equals(other.SPZ);
     }
 
     @Override
@@ -41,7 +45,7 @@ public class CarSPZ implements IHashableData<CarSPZ> {
 
     @Override
     public int getSize() {
-        return Helper.VELKOST_BYTE + Helper.MAX_ECV + Helper.VELKOST_INTEGER;
+        return Helper.VELKOST_BYTE + Helper.MAX_SPZ + Helper.VELKOST_INTEGER;
     }
 
     @Override
@@ -49,7 +53,7 @@ public class CarSPZ implements IHashableData<CarSPZ> {
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
             DataOutputStream dataStream = new DataOutputStream(byteStream);
 
-            Helper.writeString(dataStream, ECV, Helper.MAX_ECV);
+            Helper.writeString(dataStream, SPZ, Helper.MAX_SPZ);
             dataStream.writeInt(this.address);
 
             return byteStream.toByteArray();
@@ -64,11 +68,19 @@ public class CarSPZ implements IHashableData<CarSPZ> {
         try (ByteArrayInputStream byteStream = new ByteArrayInputStream(bytes);
              DataInputStream dataStream = new DataInputStream(byteStream)) {
 
-            this.ECV = Helper.readString(dataStream, Helper.MAX_ECV);
+            this.SPZ = Helper.readString(dataStream, Helper.MAX_SPZ);
             this.address = dataStream.readInt();
 
         } catch (IOException e) {
             throw new RuntimeException("Error frombytearray", e);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "CarSPZ{" +
+                "ECV='" + SPZ + '\'' +
+                ", address=" + address +
+                '}';
     }
 }

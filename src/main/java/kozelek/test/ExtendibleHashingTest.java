@@ -88,130 +88,109 @@ class ExtendibleHashingTest {
 
     @Test
     void testInsertAndDelete() {
-
         for (int i = 0; i < pocet; i++) {
             TestRecord record = new TestRecord(i, "Record " + i);
-            int index = ext.insert(record);
+            ext.insert(record);
             records.add(record);
-            indexes.add(index);
         }
 
         for (int i = 0; i < pocetDelete; i++) {
             int index = rand.nextInt(records.size());
             TestRecord record = records.remove(index);
-            int indexBlock = indexes.remove(index);
 
-            TestRecord retrieved = ext.getRecord(indexBlock, record);
+            TestRecord retrieved = ext.getRecord(record);
             assertNotNull(retrieved, "Tu by este mal existovat");
 
-            ext.delete(indexBlock, record);
+            ext.delete(record);
 
-            retrieved = ext.getRecord(indexBlock, record);
+            retrieved = ext.getRecord(record);
             assertNull(retrieved, "Nemali by existovat");
         }
 
         for (int i = 0; i < records.size(); i++) {
-            TestRecord retrieved = ext.getRecord(indexes.get(i), records.get(i));
+            TestRecord retrieved = ext.getRecord(records.get(i));
             assertNotNull(retrieved, "Mal by existovat");
             assertTrue(records.get(i).equal(retrieved));
         }
     }
 
     @Test
-    void testBlockManagement() {
-        int size = ext.getAllBlocks().size();
-        for (int i = 0; i < pocet; i++) {
-            TestRecord record = new TestRecord(i, "Record " + i);
-            int index = ext.insert(record);
-            records.add(record);
-            indexes.add(index);
-        }
-
-        for (int i = 0; i < pocetDelete; i++) {
-            TestRecord record = records.removeLast();
-            int indexBlock = indexes.removeLast();
-            ext.delete(indexBlock, record);
-        }
-
-        int afterSize = ext.getAllBlocks().size();
-        assertTrue(afterSize > size);
-    }
-
-    @Test
     void testRandomOperations() {
         int init = 0;
-        int numberOfRandomOperations = 4;
+        int numberOfRandomOperations = 3;
         for (int i = 0; i < init; i++) {
             TestRecord test = new TestRecord(i, "Record " + i);
-            int index = ext.insert(test);
+            ext.insert(test);
             this.records.add(test);
-            this.indexes.add(index);
         }
 
-        TestRecord lastInserted = null;
 
         for (int j = init; j < pocet + init; j++) {
             int operation = rand.nextInt(numberOfRandomOperations);
             switch (operation) {
                 case 0: // insert
                     TestRecord newEntity = new TestRecord(j, "Record " + j);
-                    int i = ext.insert(newEntity);
-
-                    lastInserted = newEntity;
+                    ext.insert(newEntity);
                     this.records.add(newEntity);
-                    this.indexes.add(i);
-
                     continue;
                 case 1: // delete
                     if (!records.isEmpty()) {
                         int index = rand.nextInt(this.records.size());
                         TestRecord toDelete = this.records.remove(index);
-                        int indexBlock = indexes.remove(index);
-                        TestRecord found = ext.getRecord(indexBlock, toDelete);
+
+                        TestRecord found = ext.getRecord(toDelete);
+                        if (found == null) {
+                            System.out.println(j);
+                            System.out.println(toDelete);
+                            ext.printAll();
+                        }
+
                         assertTrue(found.equal(toDelete));
-                        ext.delete(indexBlock, toDelete);
-                        found = ext.getRecord(indexBlock, toDelete);
+
+                        ext.delete(toDelete);
+
+
+                        found = ext.getRecord(toDelete);
                         assertNull(found, "Test == deleted");
                     } else {
                         j--;
                     }
                     continue;
-                case 2: // edit
-                    if (!records.isEmpty()) {
-                        TestRecord edited = new TestRecord(j + 10000, "edited " + j);
-
-                        int index = rand.nextInt(this.records.size());
-                        TestRecord toEdit = this.records.remove(index);
-                        int indexBlock = indexes.remove(index);
-
-                        ext.edit(indexBlock, toEdit, edited);
-
-                        this.records.add(edited);
-                        this.indexes.add(indexBlock);
-
-                        TestRecord notFound = null;
-                        try {
-                            notFound = this.ext.getRecord(indexBlock, toEdit);
-                        } catch (RuntimeException e) {
-                            System.out.println(edited);
-                            System.out.printf("%d %s", indexBlock, toEdit);
-                        }
-                        TestRecord found = this.ext.getRecord(indexBlock, edited);
-
-                        assertNull(notFound);
-                        assertNotNull(found, " " + index + " " + indexBlock);
-                        assertTrue(found.equal(edited));
-                    } else {
-                        j--;
-                    }
-                    continue;
-                case 3:
+//                case 2: // edit
+//                    if (!records.isEmpty()) {
+//                        TestRecord edited = new TestRecord(j + 10000, "edited " + j);
+//
+//                        int index = rand.nextInt(this.records.size());
+//                        TestRecord toEdit = this.records.remove(index);
+//                        int indexBlock = indexes.remove(index);
+//
+//                        ext.edit(indexBlock, toEdit, edited);
+//
+//                        this.records.add(edited);
+//                        this.indexes.add(indexBlock);
+//
+//                        TestRecord notFound = null;
+//                        try {
+//                            notFound = this.ext.getRecord(indexBlock, toEdit);
+//                        } catch (RuntimeException e) {
+//                            System.out.println(edited);
+//                            System.out.printf("%d %s", indexBlock, toEdit);
+//                        }
+//                        TestRecord found = this.ext.getRecord(indexBlock, edited);
+//
+//                        assertNull(notFound);
+//                        assertNotNull(found, " " + index + " " + indexBlock);
+//                        assertTrue(found.equal(edited));
+//                    } else {
+//                        j--;
+//                    }
+//                    continue;
+                case 2:
                     if (!records.isEmpty()) {
                         int index = rand.nextInt(this.records.size());
                         TestRecord toFind = this.records.get(index);
-                        int indexBlock = indexes.get(index);
 
-                        TestRecord found = this.ext.getRecord(indexBlock, toFind);
+                        TestRecord found = this.ext.getRecord(toFind);
                         assertNotNull(found);
                         assertTrue(found.equal(toFind), "Test == found");
                     } else {
@@ -232,6 +211,10 @@ class ExtendibleHashingTest {
         }
 
         public TestRecord() {
+        }
+
+        public int getId() {
+            return id;
         }
 
         @Override

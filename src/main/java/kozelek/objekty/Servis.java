@@ -114,10 +114,8 @@ public class Servis implements IRecord<Servis> {
 
     @Override
     public String toString() {
-        return "Servis{" +
-                "datum=" + datum.getDayOfMonth() + "." + datum.getMonthValue() + "." + datum.getYear() +
+        return "datum=" + datum.getDayOfMonth() + "." + datum.getMonthValue() + "." + datum.getYear() +
                 ", cena=" + cena +
-                ", popis=" + popis +
-                '}';
+                ", popis=" + popis;
     }
 }
