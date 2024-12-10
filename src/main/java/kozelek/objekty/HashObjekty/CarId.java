@@ -20,10 +20,13 @@ public class CarId implements IHashableData<CarId> {
 
     @Override
     public BitSet getHash() {
-        BitSet bitSet;
-        bitSet = BitSet.valueOf(new long[] {carId});
+        if (carId == 0) {
+            BitSet bitSet = new BitSet(1);
+            bitSet.set(0);
+            return bitSet;
+        }
 
-        return bitSet;
+        return BitSet.valueOf(new long[] {carId});
     }
 
     @Override
