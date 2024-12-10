@@ -70,8 +70,17 @@ public class CarId implements IHashableData<CarId> {
 
     @Override
     public String toString() {
-        return "CarId{" +
-                "carId=" + carId +
+        return "CId{" +
+                "Id=" + carId +
+                ", adr=" + adress +
                 '}';
+    }
+
+    public int getId() {
+        return carId;
+    }
+
+    public int getAdress() {
+        return adress;
     }
 }

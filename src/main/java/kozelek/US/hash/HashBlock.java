@@ -27,6 +27,7 @@ public class HashBlock<T extends IHashableData<T>> extends Block<T> {
     @Override
     public int getSize() {
         // localDepth + pocetrecordov + (maxpocetrecordov * carId/carECV * size())
+        // carid - 4 + 4 + (3*8)
         return Helper.VELKOST_INTEGER + Helper.VELKOST_INTEGER + (this.getMaxRecordCount() * this.getInstance().getSize());
     }
 
@@ -82,5 +83,10 @@ public class HashBlock<T extends IHashableData<T>> extends Block<T> {
         }
     }
 
-
+    @Override
+    public String toString() {
+        return "HB{" +
+                "LD=" + localDepth +
+                ", " + getRecords();
+    }
 }

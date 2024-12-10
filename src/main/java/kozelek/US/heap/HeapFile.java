@@ -7,7 +7,7 @@ import java.io.*;
 import java.util.ArrayList;
 
 public class HeapFile<T extends IRecord<T>> {
-    private int recordCount;
+    private int maxRecordCount;
     private final Class<T> recordClass;
     private int indexEmptyBlock;
     private int indexPartialBlock;
@@ -16,7 +16,7 @@ public class HeapFile<T extends IRecord<T>> {
     private Block<T> block;
 
     public HeapFile(String fileName, int recordCount, Class<T> recordClass) {
-        this.recordCount = recordCount;
+        this.maxRecordCount = recordCount;
         this.recordClass = recordClass;
         this.fileManager = new FileManager<>(fileName);
 
@@ -129,7 +129,7 @@ public class HeapFile<T extends IRecord<T>> {
      * @return int - index vkladaného bloku
      */
     private int handleNewBlockInsertion(T record) {
-        Block<T> newBlock = new Block<>(recordCount, recordClass);
+        Block<T> newBlock = new Block<>(maxRecordCount, recordClass);
         newBlock.addRecord(record);
         int newAddress = (int) (this.fileManager.appendBlock(newBlock) / block.getSize());
 
@@ -273,7 +273,7 @@ public class HeapFile<T extends IRecord<T>> {
      */
     public Block<T> loadBlock(int index) {
         byte[] bytes = this.fileManager.readBytes(index * block.getSize(), block.getSize());
-        Block<T> loadedBlock = new Block<>(recordCount, recordClass);
+        Block<T> loadedBlock = new Block<>(maxRecordCount, recordClass);
         loadedBlock.fromByteArray(bytes);
         return loadedBlock;
     }
@@ -390,10 +390,14 @@ public class HeapFile<T extends IRecord<T>> {
             System.out.println(block);
             index++;
         }
+        System.out.println(block.getSize());
+        System.out.println(blocks.size());
+        System.out.println(this.fileManager.getFileSize());
+        System.out.println(this.fileManager.getFileSize() / block.getSize());
     }
 
-    public int getRecordCount() {
-        return recordCount;
+    public int getMaxRecordCount() {
+        return maxRecordCount;
     }
 
     public int getCountOfAllRecords() {
@@ -440,7 +444,7 @@ public class HeapFile<T extends IRecord<T>> {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             writer.write(indexEmptyBlock + "\n");
             writer.write(indexPartialBlock + "\n");
-            writer.write(recordCount + "\n");
+            writer.write(maxRecordCount + "\n");
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -456,7 +460,7 @@ public class HeapFile<T extends IRecord<T>> {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             this.indexEmptyBlock = Integer.parseInt(reader.readLine());
             this.indexPartialBlock = Integer.parseInt(reader.readLine());
-            this.recordCount = Integer.parseInt(reader.readLine());
+            this.maxRecordCount = Integer.parseInt(reader.readLine());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
