@@ -104,7 +104,7 @@ public class Servis implements IRecord<Servis> {
     @Override
     public boolean equal(Servis other) {
         if (other == null) return false;
-        return this.datum.equals(other.datum);
+        return this.datum.isEqual(other.datum) && Math.abs(this.cena - other.cena) < 0.001;
     }
 
     @Override

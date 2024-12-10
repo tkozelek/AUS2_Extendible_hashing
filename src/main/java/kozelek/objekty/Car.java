@@ -38,6 +38,12 @@ public class Car implements IRecord<Car> {
         this.servisInstance = new Servis();
     }
 
+    public void addAllServisy(ArrayList<Servis> servises) {
+        for (int i = 0; i < servises.size(); i++) {
+            this.addServis(servises.get(i));
+        }
+    }
+
     public void addServis(Servis servis) {
         if (servisy.size() < Helper.MAX_POCET_SERVISOV)
             servisy.add(servis);
@@ -46,7 +52,12 @@ public class Car implements IRecord<Car> {
     }
 
     public void removeServis(Servis servis) {
-        servisy.remove(servis);
+        for (int i = 0; i < servisy.size(); i++) {
+            if (servisy.get(i).equal(servis)) {
+                servisy.remove(i);
+                return;
+            }
+        }
     }
 
     public String getMeno() {

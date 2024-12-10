@@ -20,7 +20,7 @@ public class StartController {
         int maxBlockCount = 0;
         if (!s.isBlank())
             maxBlockCount = Integer.parseInt(s);
-        String filename = view.getFilenameField().getText();
+        String filename = view.getFilenameField().getText() + ".bin";
 
         this.model = new Model(filename, maxBlockCount);
         MainWindow mView = new MainWindow();

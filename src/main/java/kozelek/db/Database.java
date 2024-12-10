@@ -132,6 +132,7 @@ public class Database {
         if (car == null) {
             throw new RuntimeException("Auto nanjdene: " + id);
         }
+
         car.removeServis(servis);
         heap.update(index, block);
     }

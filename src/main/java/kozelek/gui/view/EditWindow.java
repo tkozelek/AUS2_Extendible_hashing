@@ -16,13 +16,14 @@ public class EditWindow extends JFrame {
     private JTextField spzField;
     private JButton submitEditButton;
     private JList list1;
+    private JButton deleteServisButton;
     private Car data;
 
     public EditWindow(Car data) {
         this.data = data;
         this.setValues();
         setTitle("Edit Window");
-        setMinimumSize(new Dimension(800, 500));
+        setMinimumSize(new Dimension(1300, 600));
         pack();
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         add(panel1);
@@ -61,6 +62,13 @@ public class EditWindow extends JFrame {
         }
     }
 
+    public Servis getSelectedServis() {
+        int index = this.list1.getSelectedIndex();
+        if (index >= 0) {
+            return (Servis) this.list1.getSelectedValue();
+        }
+        return null;
+    }
 
     public JButton getBackButton() {
         return backButton;
@@ -84,6 +92,10 @@ public class EditWindow extends JFrame {
 
     public JTextField getSpzField() {
         return spzField;
+    }
+
+    public JButton getDeleteServisButton() {
+        return deleteServisButton;
     }
 
     public void showError(String message) {
