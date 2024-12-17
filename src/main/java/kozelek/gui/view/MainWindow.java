@@ -14,6 +14,7 @@ public class MainWindow extends JFrame {
     private JPanel panel1;
     private JButton getAllButton;
     private JButton addServisButton;
+    private JButton printButton;
 
     public MainWindow() {
         add(panel1);
@@ -60,6 +61,10 @@ public class MainWindow extends JFrame {
 
     public JButton getGetAllButton() {
         return getAllButton;
+    }
+
+    public JButton getPrintButton() {
+        return printButton;
     }
 
     public void showError(String message) {

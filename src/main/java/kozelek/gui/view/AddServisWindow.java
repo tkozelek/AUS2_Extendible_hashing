@@ -16,6 +16,7 @@ public class AddServisWindow extends JFrame {
     private JTextField popisField;
     private JButton addButton;
     private JLabel popisCountLabel;
+    private JTextField idField;
 
     public AddServisWindow() {
         setTitle("Add Window");
@@ -32,6 +33,10 @@ public class AddServisWindow extends JFrame {
 
     public JButton getBackButton() {
         return backButton;
+    }
+
+    public JTextField getIdField() {
+        return idField;
     }
 
     public JLabel getPopisCountLabel() {

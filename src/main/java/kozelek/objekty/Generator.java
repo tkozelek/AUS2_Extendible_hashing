@@ -8,7 +8,7 @@ import java.util.Random;
 
 public class Generator {
     private final Random rand;
-
+    private int maxIdServisy;
     private static final String[] servisDesc = {
             "vymena olej", "pneumatiky", "brzdy", "motor", "bateria",
             "geometria", "filtre"
@@ -19,6 +19,7 @@ public class Generator {
 
     public Generator() {
         this.rand = new Random();
+        this.maxIdServisy = 1;
     }
 
     public ArrayList<Car> generujIncrement(int od, int pocet, int servisCount, int popisCount) {
@@ -70,8 +71,8 @@ public class Generator {
             LocalDate date = generateRandomDate();
             double cost = rand.nextDouble(1000);
 
-            Servis servis = new Servis(date, cost);
-
+            Servis servis = new Servis(date, cost, this.maxIdServisy);
+            this.maxIdServisy++;
             int descriptionCount = rand.nextInt(Helper.MAX_POPIS_POCET + 1);
             for (int j = 0; j < descriptionCount; j++) {
                 String description = servisDesc[rand.nextInt(servisDesc.length)];
@@ -93,7 +94,7 @@ public class Generator {
             LocalDate date = generateRandomDate();
             double cost = rand.nextDouble(1000);
 
-            Servis servis = new Servis(date, cost);
+            Servis servis = new Servis(date, cost, i);
 
             int descCount = Math.min(popisCount, Helper.MAX_POPIS_POCET);
             int descriptionCount = rand.nextInt(descCount + 1);
@@ -109,9 +110,9 @@ public class Generator {
     }
 
     private LocalDate generateRandomDate() {
-        int year = rand.nextInt(5) + 2019; // den
+        int year = rand.nextInt(5) + 2019; // rok
         int month = rand.nextInt(12) + 1; // m
-        int day = rand.nextInt(28) + 1; // rok
+        int day = rand.nextInt(28) + 1; // den
         return LocalDate.of(year, month, day);
     }
 }

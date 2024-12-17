@@ -13,14 +13,9 @@ import java.util.ArrayList;
 public class Model {
     private Database database;
     private Generator generator;
-    private String filename;
-    private int maxRecordCount;
 
-    public Model(String filename, int maxRecordCount) {
-        this.filename = filename;
-        this.maxRecordCount = maxRecordCount;
-
-        this.database = new Database(maxRecordCount, filename);
+    public Model(String filename, int clusterHeap, int clusterId, int clusterSpz) {
+        this.database = new Database(filename, clusterId, clusterSpz, clusterHeap);
         this.generator = new Generator();
     }
 
@@ -54,12 +49,12 @@ public class Model {
         database.insert(meno, priezvisko, id, spz);
     }
 
-    public Car addServiceVisitById(int id, double cena, LocalDate datum, ArrayList<String> popis) {
-        return database.addServiceVisitById(id, cena, datum, popis);
+    public Car addServiceVisitById(int id, double cena, LocalDate datum, ArrayList<String> popis, int idServis) {
+        return database.addServiceVisitById(id, cena, datum, popis, idServis);
     }
 
-    public void addServiceVisitBySPZ(String SPZ, double cena, LocalDate datum, String[] popis) {
-        database.addServiceVisitBySPZ(SPZ, cena, datum, popis);
+    public void addServiceVisitBySPZ(String SPZ, double cena, LocalDate datum, String[] popis, int id) {
+        database.addServiceVisitBySPZ(SPZ, cena, datum, popis, id);
     }
 
     public void addServiceVisitById(int id, Servis servis) {
@@ -112,5 +107,45 @@ public class Model {
 
     public void deleteAllFiles() {
         database.zmazSubory();
+    }
+
+    public void printAllServises() {
+        database.printAllServis();
+    }
+
+    public void printAllCarSPZ() {
+        database.printAllSPZHashBlocks();
+    }
+
+    public void printAllCarId() {
+        database.printAllIDHashBlocks();
+    }
+
+    public ArrayList<String> hbIdToString() {
+        return database.stringDirectoryCarId();
+    }
+
+    public ArrayList<String> hbSpzToString() {
+        return database.stringDirectoryCarSpz();
+    }
+
+    public ArrayList<String> allHeapBlocksToString() {
+        return database.allHeapBlocksToString();
+    }
+
+    public String heapToString() {
+        return database.printHeapFile();
+    }
+
+    public String hfCarIdToString() {
+        return database.printHashFileCarId();
+    }
+
+    public String hfCarSpzToString() {
+        return database.printHashFileCarSpz();
+    }
+
+    public void printAllHeapBlocks() {
+        database.printAllHeapBlocks();
     }
 }

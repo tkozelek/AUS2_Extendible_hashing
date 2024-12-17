@@ -1,16 +1,19 @@
 package kozelek.objekty;
 
 import kozelek.Helper;
+import kozelek.interfaces.IHashableData;
 import kozelek.interfaces.IRecord;
 
 import java.io.*;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Calendar;
 import java.util.Date;
 
-public class Servis implements IRecord<Servis> {
+public class Servis implements IRecord<Servis>, IHashableData<Servis> {
+    private int id;
     private LocalDate datum;
     private double cena;
     private ArrayList<String> popis;
@@ -19,7 +22,8 @@ public class Servis implements IRecord<Servis> {
         this.popis = new ArrayList<>();
     }
 
-    public Servis(LocalDate datum, double cena) {
+    public Servis(LocalDate datum, double cena, int id) {
+        this.id = id;
         this.datum = datum;
         this.cena = cena;
         this.popis = new ArrayList<>();
@@ -32,6 +36,10 @@ public class Servis implements IRecord<Servis> {
         this.popis.add(popis);
     }
 
+    public int getId() {
+        return id;
+    }
+
     public void setPopis(int index, String popis) {
         this.popis.set(index, popis);
     }
@@ -42,7 +50,8 @@ public class Servis implements IRecord<Servis> {
 
     @Override
     public int getSize() {
-        return Helper.VELKOST_INTEGER + 2 * Helper.VELKOST_BYTE +
+        return Helper.VELKOST_INTEGER +
+                Helper.VELKOST_INTEGER + 2 * Helper.VELKOST_BYTE +
                 Helper.VELKOST_DOUBLE +
                 (Helper.MAX_POPIS_POCET * (Helper.VELKOST_BYTE + Helper.MAX_POPIS_DLZKA));
     }
@@ -52,6 +61,7 @@ public class Servis implements IRecord<Servis> {
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
             DataOutputStream dataStream = new DataOutputStream(byteStream);
 
+            dataStream.writeInt(id);
             dataStream.writeInt(datum.getYear());
             dataStream.writeByte(datum.getMonthValue());
             dataStream.writeByte(datum.getDayOfMonth());
@@ -82,6 +92,7 @@ public class Servis implements IRecord<Servis> {
         try (ByteArrayInputStream byteStream = new ByteArrayInputStream(bytes)) {
             DataInputStream dataStream = new DataInputStream(byteStream);
 
+            this.id = dataStream.readInt();
             int year = dataStream.readInt();
             int month = dataStream.readByte();
             int day = dataStream.readByte();
@@ -104,7 +115,8 @@ public class Servis implements IRecord<Servis> {
     @Override
     public boolean equal(Servis other) {
         if (other == null) return false;
-        return this.datum.isEqual(other.datum) && Math.abs(this.cena - other.cena) < 0.001;
+        return (this.datum.isEqual(other.datum) && Math.abs(this.cena - other.cena) < 0.001)
+                || id == other.id;
     }
 
     @Override
@@ -114,8 +126,19 @@ public class Servis implements IRecord<Servis> {
 
     @Override
     public String toString() {
-        return "datum=" + datum.getDayOfMonth() + "." + datum.getMonthValue() + "." + datum.getYear() +
+        return "id= " + id + ", datum=" + datum.getDayOfMonth() + "." + datum.getMonthValue() + "." + datum.getYear() +
                 ", cena=" + cena +
                 ", popis=" + popis;
+    }
+
+    @Override
+    public BitSet getHash() {
+        if (id == 0) {
+            BitSet bitSet = new BitSet(1);
+            bitSet.set(0);
+            return bitSet;
+        }
+
+        return BitSet.valueOf(new long[] {id});
     }
 }

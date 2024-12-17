@@ -7,7 +7,6 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
-import java.util.stream.Collectors;
 
 
 public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
@@ -16,16 +15,16 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
     private HashBlock<T> block;
     private ArrayList<Integer> freeBlocks;
 
-    public ExtendibleHashing(String filePath, Class<T> recordClass, int maxRecordCount) {
-        super(filePath, recordClass, maxRecordCount);
+    public ExtendibleHashing(String filePath, Class<T> recordClass, int clusterSize) {
+        super(filePath, recordClass, clusterSize);
         if (directory == null || directory.isEmpty()) {
             this.globalDepth = 1;
             this.freeBlocks = new ArrayList<>();
             directory = new ArrayList<>();
             for (int i = 0; i < Math.pow(2, globalDepth); i++) {
                 this.directory.add(i);
-                HashBlock<T> block = new HashBlock<>(maxRecordCount, recordClass);
-                getFileManager().writeBlock(i * block.getSize(), block);
+                this.block = new HashBlock<>(clusterSize, recordClass);
+                getFileManager().writeBlock(i * block.getClusterSize(), block);
             }
         }
     }
@@ -49,7 +48,7 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
                 if (!block.addRecord(data)) {
                     throw new RuntimeException("error inserting");
                 }
-                getFileManager().writeBlock(blockIndex * block.getSize(), block);
+                getFileManager().writeBlock(blockIndex * block.getClusterSize(), block);
                 isInserted = true;
                 return blockIndex;
             }
@@ -61,7 +60,7 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
         int localDepth = block.getLocalDepth();
         block.setLocalDepth(localDepth + 1);
 
-        HashBlock<T> newBlock = new HashBlock<>(getMaxRecordCount(), getRecordClass());
+        HashBlock<T> newBlock = new HashBlock<>(getClusterSize(), getRecordClass());
         newBlock.setLocalDepth(localDepth + 1);
         int newBlockIndex;
         if (!freeBlocks.isEmpty()) {
@@ -95,8 +94,8 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
         }
 
         // zapiseme oba bloky
-        getFileManager().writeBlock(blockIndex * block.getSize(), block);
-        getFileManager().writeBlock(newBlockIndex * block.getSize(), newBlock);
+        getFileManager().writeBlock(blockIndex * block.getClusterSize(), block);
+        getFileManager().writeBlock(newBlockIndex * block.getClusterSize(), newBlock);
     }
 
     private void cleanDirectory() {
@@ -152,7 +151,7 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
             int toIndex = canMergeWithNeighbor(neIndex, block, blockIndex);
             if (toIndex == -1) {
                 // ak sa nemohol spojit
-                getFileManager().writeBlock(blockIndex * block.getSize(), block);
+                getFileManager().writeBlock(blockIndex * block.getClusterSize(), block);
                 isDeleted = true;
                 continue;
             }
@@ -171,7 +170,7 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
 
             if (neBlock.getLocalDepth() == block.getLocalDepth()) {
                 int sum = neBlock.getValidCount() + block.getValidCount();
-                if (sum <= this.getMaxRecordCount()) {
+                if (sum <= this.block.getMaxRecordCount()) {
                     HashBlock<T> toBlock = blockIndex < neBlockIndex ? block : neBlock;
                     HashBlock<T> fromBlock = blockIndex < neBlockIndex ? neBlock : block;
                     int toIndex = Math.min(blockIndex, neBlockIndex);
@@ -189,11 +188,15 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
                         }
                     }
 
+                    cleanFreeBlocks();
+
                     toBlock.setLocalDepth(toBlock.getLocalDepth() - 1);
-                    getFileManager().writeBlock(toIndex * toBlock.getSize(), toBlock);
+                    getFileManager().writeBlock(toIndex * toBlock.getClusterSize(), toBlock);
                     if (isLastBlockWithDepth(globalDepth)) {
                         toIndex = halfDirectory(toIndex);
                     }
+
+                    setFileSize();
 
                     return toIndex;
                 }
@@ -242,7 +245,7 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
         if (oldRecord.equal(newRecord)) {
             this.block = getBlock(oldRecord);
             this.block.edit(oldRecord, newRecord);
-            getFileManager().writeBlock(blockIndex * block.getSize(), block);
+            getFileManager().writeBlock(blockIndex * block.getClusterSize(), block);
         } else {
             this.delete(oldRecord);
             this.insert(newRecord);
@@ -289,8 +292,8 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
     }
 
     public HashBlock<T> loadBlock(int blockIndex) {
-        HashBlock<T> block = new HashBlock<>(getMaxRecordCount(), getRecordClass());
-        byte[] bytes = getFileManager().readBytes(blockIndex * block.getSize(), block.getSize());
+        HashBlock<T> block = new HashBlock<>(this.getClusterSize(), getRecordClass());
+        byte[] bytes = getFileManager().readBytes(blockIndex * block.getClusterSize(), block.getClusterSize());
         block.fromByteArray(bytes);
         return block;
     }
@@ -312,12 +315,22 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
         }
     }
 
-    public void printDirectory() {
+    public ArrayList<String> toStringDirectory() {
+        ArrayList<Integer> checked = new ArrayList<>();
+        ArrayList<String> result = new ArrayList<>();
+
         int x = 0;
         for (int i : directory) {
-            System.out.printf("%d %d\n", x, i);
-            ++x;
+            if (!checked.contains(i)) {
+                HashBlock<T> tempBlock = this.loadBlock(i);
+                result.add(String.format("%d: %d %s\n", x, i, tempBlock));
+                checked.add(i);
+            } else {
+                result.add(String.format("%d: -> %d\n", x, i));
+            }
+            x++;
         }
+        return result;
     }
 
     public void saveState() {
@@ -343,6 +356,7 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             writer.write(globalDepth + "\n");
+            writer.write(getClusterSize() + "\n");
 
             for (int i = 0; i < freeBlocks.size(); i++) {
                 if (i == freeBlocks.size() - 1) {
@@ -371,8 +385,10 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
         if (!file.exists()) {
             return;
         }
+
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             this.globalDepth = Integer.parseInt(reader.readLine());
+            this.setClusterSize(Integer.parseInt(reader.readLine()));
             this.directory = new ArrayList<>();
             this.freeBlocks = new ArrayList<>();
             String[] line = reader.readLine().split(",");
@@ -393,8 +409,26 @@ public class ExtendibleHashing<T extends IHashableData<T>> extends HeapFile<T> {
     @Override
     public String toString() {
         return "ExtendibleHashing{" +
-                "directory=" + directory +
-                ", globalDepth=" + globalDepth +
+                "GD=" + globalDepth +
+                ", dir=" + directory +
+                ", freeBlocks=" + freeBlocks +
+                ", clusterSize=" + getClusterSize() +
                 '}';
+    }
+
+    public void printFreeBlocks() {
+        System.out.println(freeBlocks);
+    }
+
+    public void setFileSize() {
+        int index = Collections.max(directory);
+        // nastavime filesize na index * cluster
+        int fileSize = (int) (getFileManager().getFileSize() - (index + 1) * getClusterSize());
+        getFileManager().truncateFile(fileSize);
+    }
+
+    private void cleanFreeBlocks() {
+        int maxIndex = Collections.max(directory);
+        freeBlocks.removeIf(blockIndex -> blockIndex > maxIndex);
     }
 }

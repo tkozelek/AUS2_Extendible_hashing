@@ -16,13 +16,22 @@ public class StartController {
     }
 
     private void start() {
-        String s = view.getRecordCountField().getText();
-        int maxBlockCount = 0;
-        if (!s.isBlank())
-            maxBlockCount = Integer.parseInt(s);
-        String filename = view.getFilenameField().getText() + ".bin";
+        String heap = view.getClusterHeapField().getText();
+        String carId = view.getClusterCarIdField().getText();
+        String carSpz = view.getClusterCarSpzField().getText();
 
-        this.model = new Model(filename, maxBlockCount);
+        int clusterHeap = 5000; // default
+        int clusterCarId = 50;
+        int clusterCarSpz = 90;
+
+        if (!heap.isBlank() && !carId.isBlank() && !carSpz.isBlank()) {
+            clusterHeap = Integer.parseInt(heap);
+            clusterCarId = Integer.parseInt(carId);
+            clusterCarSpz = Integer.parseInt(carSpz);
+        }
+
+        String filename = view.getFilenameField().getText() + ".bin";
+        this.model = new Model(filename, clusterHeap, clusterCarId, clusterCarSpz);
         MainWindow mView = new MainWindow();
         new MainController(mView, model);
         this.view.dispose();

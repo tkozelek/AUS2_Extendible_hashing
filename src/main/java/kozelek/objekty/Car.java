@@ -22,11 +22,13 @@ public class Car implements IRecord<Car> {
     public Car(int id) {
         this.id = id;
         this.SPZ = "";
+        this.servisInstance = new Servis();
     }
 
     public Car(String SPZ) {
         this.SPZ = SPZ;
         this.id = -10;
+        this.servisInstance = new Servis();
     }
 
     public Car(String meno, String priezvisko, int id, String ECV) {

@@ -78,9 +78,9 @@ public class CarSPZ implements IHashableData<CarSPZ> {
 
     @Override
     public String toString() {
-        return "CarSPZ{" +
+        return "CSPZ{" +
                 "ECV='" + SPZ + '\'' +
-                ", address=" + address +
+                ", adr=" + address +
                 '}';
     }
 }

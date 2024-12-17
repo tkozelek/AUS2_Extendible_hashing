@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ExtendibleHashingTest {
 
     private ExtendibleHashing<TestRecord> ext;
-    private final int recordCount = 5;
+    private final int clusterSize = 500;
     private Random rand;
     private ArrayList<TestRecord> records;
     private ArrayList<Integer> indexes;
@@ -33,7 +33,7 @@ class ExtendibleHashingTest {
             file.delete();
         }
 
-        ext = new ExtendibleHashing<>(tempFile, TestRecord.class, recordCount);
+        ext = new ExtendibleHashing<>(tempFile, TestRecord.class, clusterSize);
         rand = new Random();
 
         this.records = new ArrayList<>(pocet);
@@ -94,7 +94,7 @@ class ExtendibleHashingTest {
             records.add(record);
         }
 
-        for (int i = 0; i < pocetDelete; i++) {
+        for (int i = 0; i < pocet; i++) {
             int index = rand.nextInt(records.size());
             TestRecord record = records.remove(index);
 

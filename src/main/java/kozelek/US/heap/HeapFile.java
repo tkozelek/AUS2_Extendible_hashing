@@ -7,7 +7,7 @@ import java.io.*;
 import java.util.ArrayList;
 
 public class HeapFile<T extends IRecord<T>> {
-    private int maxRecordCount;
+    private int clusterSize = -1;
     private final Class<T> recordClass;
     private int indexEmptyBlock;
     private int indexPartialBlock;
@@ -15,8 +15,8 @@ public class HeapFile<T extends IRecord<T>> {
     private final FileManager<T> fileManager;
     private Block<T> block;
 
-    public HeapFile(String fileName, Class<T> recordClass, int recordCount) {
-        this.maxRecordCount = recordCount;
+    public HeapFile(String fileName, Class<T> recordClass, int clusterSize) {
+        this.clusterSize = clusterSize;
         this.recordClass = recordClass;
         this.fileManager = new FileManager<>(fileName);
 
@@ -25,16 +25,16 @@ public class HeapFile<T extends IRecord<T>> {
 
         this.loadState();
 
-        if (maxRecordCount != -1)
-            this.block = new Block<>(maxRecordCount, recordClass);
+        if (clusterSize != -1)
+            this.block = new Block<>(this.clusterSize, recordClass);
         else
-            this.block = new Block<>(recordCount, recordClass);
+            this.block = new Block<>(clusterSize, recordClass);
 
     }
 
     public int insert(T record) {
         int index = getIndexOfNextInsert();
-        int address = index * block.getSize();
+        int address = index * block.getClusterSize();
 
         if (index == -1) {
             return handleNewBlockInsertion(record);
@@ -55,7 +55,7 @@ public class HeapFile<T extends IRecord<T>> {
             this.fileManager.writeBlock(address, block);
             return index;
         } else {
-            throw new RuntimeException("Record nebol vložený");
+            throw new RuntimeException("Record nebol vložený" + record);
         }
     }
 
@@ -68,7 +68,7 @@ public class HeapFile<T extends IRecord<T>> {
 
             // ak bol partial aj zostal, neriešime nič
             if (countBeforeDelete != block.getMaxRecordCount() && countAfterDelete != 0) {
-                this.fileManager.writeBlock(index * block.getSize(), block);
+                this.fileManager.writeBlock(index * block.getClusterSize(), block);
                 return;
             }
 
@@ -81,7 +81,7 @@ public class HeapFile<T extends IRecord<T>> {
                 this.becomesEmptyBlockFromPartial(index);
 
                 // Check if this is the last block
-                if (index == this.fileManager.getLastBlockIndex(block.getSize())) {
+                if (index == this.fileManager.getLastBlockIndex(block.getClusterSize())) {
                     this.truncateEmptyBlocks();
                     return;
                 }
@@ -89,7 +89,7 @@ public class HeapFile<T extends IRecord<T>> {
                 this.becomesPartialFromFull(index);
             }
 
-            this.fileManager.writeBlock(index * block.getSize(), block);
+            this.fileManager.writeBlock(index * block.getClusterSize(), block);
         }
     }
 
@@ -102,7 +102,7 @@ public class HeapFile<T extends IRecord<T>> {
         if (block.getNext() != -1) {
             Block<T> blockNext = this.loadBlock(block.getNext());
             blockNext.setPrev(-1);
-            this.fileManager.writeBlock(index * block.getSize(), blockNext);
+            this.fileManager.writeBlock(index * block.getClusterSize(), blockNext);
 
             indexEmptyBlock = block.getNext();
             block.setNext(-1);
@@ -128,9 +128,9 @@ public class HeapFile<T extends IRecord<T>> {
      * @return int - index vkladaného bloku
      */
     private int handleNewBlockInsertion(T record) {
-        Block<T> newBlock = new Block<>(maxRecordCount, recordClass);
+        Block<T> newBlock = new Block<>(clusterSize, recordClass);
         newBlock.addRecord(record);
-        int newAddress = (int) (this.fileManager.appendBlock(newBlock) / block.getSize());
+        int newAddress = (int) (this.fileManager.appendBlock(newBlock) / block.getClusterSize());
 
         // partial aj empty musia byt prazdne
         if (newBlock.getValidCount() != newBlock.getMaxRecordCount()) {
@@ -164,7 +164,7 @@ public class HeapFile<T extends IRecord<T>> {
         // posun dalsieho na indexemptyblock
         Block<T> blockNext = this.loadBlock(block.getNext());
         blockNext.setPrev(-1);
-        this.fileManager.writeBlock(block.getNext() * block.getSize(), blockNext);
+        this.fileManager.writeBlock(block.getNext() * block.getClusterSize(), blockNext);
         this.indexEmptyBlock = block.getNext();
         block.setNext(-1);
     }
@@ -178,12 +178,12 @@ public class HeapFile<T extends IRecord<T>> {
     private void updatePartialBlockChain(int blockIndex) {
         Block<T> currentPartial = this.loadBlock(indexPartialBlock);
         currentPartial.setPrev(blockIndex);
-        this.fileManager.writeBlock(indexPartialBlock * block.getSize(), currentPartial);
+        this.fileManager.writeBlock(indexPartialBlock * block.getClusterSize(), currentPartial);
 
         block.setNext(indexPartialBlock);
         block.setPrev(-1);
         indexPartialBlock = blockIndex;
-        this.fileManager.writeBlock(blockIndex * block.getSize(), block);
+        this.fileManager.writeBlock(blockIndex * block.getClusterSize(), block);
     }
 
     /**
@@ -196,12 +196,12 @@ public class HeapFile<T extends IRecord<T>> {
             Block<T> blockNext = this.loadBlock(block.getNext());
             blockNext.setPrev(-1);
 
-            this.fileManager.writeBlock(block.getNext() * block.getSize(), blockNext);
+            this.fileManager.writeBlock(block.getNext() * block.getClusterSize(), blockNext);
 
             this.indexPartialBlock = block.getNext();
             block.setNext(-1);
 
-            this.fileManager.writeBlock(index * block.getSize(), block);
+            this.fileManager.writeBlock(index * block.getClusterSize(), block);
         } else {
             this.indexPartialBlock = -1;
         }
@@ -215,7 +215,7 @@ public class HeapFile<T extends IRecord<T>> {
     private void becomesEmptyFromFull(int index) {
         Block<T> blockPrev = this.loadBlock(indexEmptyBlock);
         blockPrev.setPrev(index);
-        this.fileManager.writeBlock(indexEmptyBlock * block.getSize(), blockPrev);
+        this.fileManager.writeBlock(indexEmptyBlock * block.getClusterSize(), blockPrev);
 
         block.setNext(indexEmptyBlock);
         indexEmptyBlock = index;
@@ -231,7 +231,7 @@ public class HeapFile<T extends IRecord<T>> {
         if (indexPartialBlock != -1) {
             Block<T> curPartial = this.loadBlock(indexPartialBlock);
             curPartial.setPrev(index);
-            this.fileManager.writeBlock(indexPartialBlock * block.getSize(), curPartial);
+            this.fileManager.writeBlock(indexPartialBlock * block.getClusterSize(), curPartial);
 
             block.setNext(indexPartialBlock);
         }
@@ -256,7 +256,7 @@ public class HeapFile<T extends IRecord<T>> {
             // pridame do zretazenia prazdnych
             Block<T> curEmptyBlock = this.loadBlock(indexEmptyBlock);
             curEmptyBlock.setPrev(index);
-            this.fileManager.writeBlock(indexEmptyBlock * block.getSize(), curEmptyBlock);
+            this.fileManager.writeBlock(indexEmptyBlock * block.getClusterSize(), curEmptyBlock);
 
             block.setNext(indexEmptyBlock);
         } else {
@@ -273,15 +273,15 @@ public class HeapFile<T extends IRecord<T>> {
      * @return Block<T>, načítaný block
      */
     public Block<T> loadBlock(int index) {
-        byte[] bytes = this.fileManager.readBytes(index * block.getSize(), block.getSize());
-        Block<T> loadedBlock = new Block<>(maxRecordCount, recordClass);
+        byte[] bytes = this.fileManager.readBytes(index * block.getClusterSize(), block.getClusterSize());
+        Block<T> loadedBlock = new Block<>(clusterSize, recordClass);
         loadedBlock.fromByteArray(bytes);
         return loadedBlock;
     }
 
     public void truncateEmptyBlocks() {
         long fileSize = this.fileManager.getFileSize();
-        int size = block.getSize();
+        int size = block.getClusterSize();
         int lastBlockIndex = (int) (fileSize / size) - 1;
 
         while (lastBlockIndex >= 0) {
@@ -319,8 +319,8 @@ public class HeapFile<T extends IRecord<T>> {
             // nacitame oba bloky
             blockPrev.setNext(block.getNext());
             blockNext.setPrev(block.getPrev());
-            this.fileManager.writeBlock(block.getPrev() * block.getSize(), blockPrev);
-            this.fileManager.writeBlock(block.getNext() * block.getSize(), blockNext);
+            this.fileManager.writeBlock(block.getPrev() * block.getClusterSize(), blockPrev);
+            this.fileManager.writeBlock(block.getNext() * block.getClusterSize(), blockNext);
             block.setPrev(-1);
             block.setNext(-1);
             result = true;
@@ -328,7 +328,7 @@ public class HeapFile<T extends IRecord<T>> {
             // ma prev block ale nema next, je na konci
             Block<T> blockPrev = this.loadBlock(block.getPrev());
             blockPrev.setNext(-1);
-            this.fileManager.writeBlock(block.getPrev() * block.getSize(), blockPrev);
+            this.fileManager.writeBlock(block.getPrev() * block.getClusterSize(), blockPrev);
             block.setPrev(-1);
             result = true;
         } else if (block.getNext() != -1 && block.getPrev() == -1) {
@@ -341,7 +341,7 @@ public class HeapFile<T extends IRecord<T>> {
             else {
                 this.indexEmptyBlock = block.getNext();
             }
-            this.fileManager.writeBlock(block.getNext() * block.getSize(), blockNext);
+            this.fileManager.writeBlock(block.getNext() * block.getClusterSize(), blockNext);
             block.setNext(-1);
             result = true;
         }
@@ -360,14 +360,14 @@ public class HeapFile<T extends IRecord<T>> {
     public void edit(int index, T oldRecord, T newRecord) {
         block = this.loadBlock(index);
         block.edit(oldRecord, newRecord);
-        this.fileManager.writeBlock(index * block.getSize(), block);
+        this.fileManager.writeBlock(index * block.getClusterSize(), block);
     }
 
     public ArrayList<Block<T>> getAllBlocks() {
         ArrayList<Block<T>> blocks = new ArrayList<>();
         long fileSize = fileManager.getFileSize();
 
-        int numberOfBlocks = (int) (fileSize / block.getSize());
+        int numberOfBlocks = (int) (fileSize / block.getClusterSize());
 
         for (int i = 0; i < numberOfBlocks; i++) {
             // precitaj block na indexe
@@ -386,14 +386,27 @@ public class HeapFile<T extends IRecord<T>> {
             System.out.println(block);
             index++;
         }
-        System.out.println(block.getSize());
+        System.out.println(getClusterSize());
         System.out.println(blocks.size());
         System.out.println(this.fileManager.getFileSize());
-        System.out.println(this.fileManager.getFileSize() / block.getSize());
+        System.out.println(this.fileManager.getFileSize() / block.getClusterSize());
     }
 
-    public int getMaxRecordCount() {
-        return maxRecordCount;
+    public ArrayList<String> allBlocksToString() {
+        ArrayList<Block<T>> blocks = this.getAllBlocks();
+        ArrayList<String> result = new ArrayList<>();
+        int i = 0;
+        StringBuilder sb = new StringBuilder();
+        for (Block<T> block : blocks) {
+            String str = i + ": " + block.toString();
+            result.add(str);
+            i++;
+        }
+        return result;
+    }
+
+    public int getClusterSize() {
+        return clusterSize;
     }
 
     public int getCountOfAllRecords() {
@@ -414,6 +427,7 @@ public class HeapFile<T extends IRecord<T>> {
         return "HeapFile{" +
                 "indexEmptyBlock=" + indexEmptyBlock +
                 ", indexPartialyEmptyBlock=" + indexPartialBlock +
+                ", clusterSize=" + clusterSize +
                 '}';
     }
 
@@ -449,7 +463,7 @@ public class HeapFile<T extends IRecord<T>> {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             writer.write(indexEmptyBlock + "\n");
             writer.write(indexPartialBlock + "\n");
-            writer.write(maxRecordCount + "\n");
+            writer.write(clusterSize + "\n");
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -462,11 +476,12 @@ public class HeapFile<T extends IRecord<T>> {
         if (!file.exists()) {
             return;
         }
+
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             this.indexEmptyBlock = Integer.parseInt(reader.readLine());
             this.indexPartialBlock = Integer.parseInt(reader.readLine());
-            this.maxRecordCount = Integer.parseInt(reader.readLine());
-            this.block = new Block<>(maxRecordCount, this.recordClass);
+            this.clusterSize = Integer.parseInt(reader.readLine());
+            this.block = new Block<>(clusterSize, this.recordClass);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -492,7 +507,11 @@ public class HeapFile<T extends IRecord<T>> {
         return block;
     }
 
+    public void setClusterSize(int clusterSize) {
+        this.clusterSize = clusterSize;
+    }
+
     public void update(int index, Block<T> block) {
-        this.fileManager.writeBlock(index * block.getSize(), block);
+        this.fileManager.writeBlock(index * block.getClusterSize(), block);
     }
 }

@@ -34,9 +34,18 @@ public class MainController {
 
         view.getAddButton().addActionListener(e -> addNew());
         view.getAddServisButton().addActionListener(e -> addServis());
+
+        view.getPrintButton().addActionListener(e -> print());
+
         view.setVisible(true);
 
         this.listModel = new DefaultListModel<Car>();
+    }
+
+    private void print() {
+        PrintWindow printWindow = new PrintWindow();
+        PrintController printController = new PrintController(printWindow, model);
+        printWindow.setVisible(true);
     }
 
     private void saveState() {
@@ -54,9 +63,11 @@ public class MainController {
 
     private void addServis() {
         Car car = getSelectedItem();
-        AddServisWindow addServisWindow = new AddServisWindow();
-        AddServisController addServisController = new AddServisController(addServisWindow, model, this, car);
-        addServisWindow.setVisible(true);
+        if (car != null) {
+            AddServisWindow addServisWindow = new AddServisWindow();
+            AddServisController addServisController = new AddServisController(addServisWindow, model, this, car);
+            addServisWindow.setVisible(true);
+        }
     }
 
     private Car getSelectedItem() {
@@ -79,8 +90,10 @@ public class MainController {
 
     private void deleteSelected() {
         int index = this.view.getList1().getSelectedIndex();
-        Car item = this.getSelectedItem();
-        this.delete(index, item);
+        Car car = this.getSelectedItem();
+        if (index >= 0 && car != null) {
+            this.delete(index, car);
+        }
     }
 
     private void delete(int index, Car item) {
@@ -104,9 +117,11 @@ public class MainController {
 
     private void editData() {
         Car car = getSelectedItem();
-        EditWindow editWindow = new EditWindow(car);
-        EditController editController = new EditController(editWindow, model, this);
-        editWindow.setVisible(true);
+        if (car != null) {
+            EditWindow editWindow = new EditWindow(car);
+            EditController editController = new EditController(editWindow, model, this);
+            editWindow.setVisible(true);
+        }
     }
 
     private void findBySPZ() {
@@ -182,6 +197,4 @@ public class MainController {
             this.view.getList1().setModel(listModel);
         }
     }
-
-
 }

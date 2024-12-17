@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class HeapFileTest {
 
     private HeapFile<TestRecord> heap;
-    private final int recordCount = 5;
+    private final int clusterSize = 500;
     private Random rand;
     private ArrayList<TestRecord> records;
     private ArrayList<Integer> indexes;
@@ -26,8 +26,13 @@ class HeapFileTest {
     @BeforeEach
     void setUp() {
         String tempFile = "testHeapFile.bin";
-        heap = new HeapFile<>(tempFile, TestRecord.class, recordCount);
+        heap = new HeapFile<>(tempFile, TestRecord.class, clusterSize);
         rand = new Random();
+
+        File file = new File(tempFile);
+        if (file.exists()) {
+            file.delete();
+        }
 
         this.records = new ArrayList<>(pocet);
         this.indexes = new ArrayList<>(pocet);

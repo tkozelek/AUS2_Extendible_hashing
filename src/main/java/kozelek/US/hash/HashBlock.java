@@ -10,9 +10,10 @@ import java.util.ArrayList;
 
 public class HashBlock<T extends IHashableData<T>> extends Block<T> {
     private int localDepth;
+    private final int blockDataSize = 2 * Helper.VELKOST_INTEGER;
 
-    public HashBlock(int maxRecordCount, Class<T> recordClass) {
-        super(maxRecordCount, recordClass);
+    public HashBlock(int clusterSize, Class<T> recordClass) {
+        super(clusterSize, recordClass);
         this.localDepth = 1;
     }
 
@@ -22,6 +23,13 @@ public class HashBlock<T extends IHashableData<T>> extends Block<T> {
 
     public void setLocalDepth(int localDepth) {
         this.localDepth = localDepth;
+    }
+
+    public int getMaxRecordCount() {
+        int cluster = getClusterSize();
+        int size = this.getInstance().getSize();
+
+        return (cluster - blockDataSize) / size;
     }
 
     @Override
@@ -47,6 +55,11 @@ public class HashBlock<T extends IHashableData<T>> extends Block<T> {
                 } else {
                     dataStream.write(new byte[this.getInstance().getSize()]);
                 }
+            }
+
+            int currentSize = byteStream.size();
+            if (currentSize < getClusterSize()) {
+                dataStream.write(new byte[getClusterSize() - currentSize]);
             }
 
             return byteStream.toByteArray();
@@ -87,6 +100,7 @@ public class HashBlock<T extends IHashableData<T>> extends Block<T> {
     public String toString() {
         return "HB{" +
                 "LD=" + localDepth +
+                ", MRC=" + getMaxRecordCount() +
                 ", " + getRecords();
     }
 }

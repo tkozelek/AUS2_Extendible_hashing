@@ -45,6 +45,7 @@ public class AddServisController {
 
     private void handleSave() {
         try {
+            int id = Integer.parseInt(view.getIdField().getText());
             int den = Integer.parseInt(view.getDayField().getText());
             int mesiac = Integer.parseInt(view.getMonthField().getText());
             int rok = Integer.parseInt(view.getYearField().getText());
@@ -52,7 +53,7 @@ public class AddServisController {
 
             LocalDate datum = LocalDate.of(rok, mesiac, den);
 
-            Car newCar = this.model.addServiceVisitById(car.getId(), cena, datum, popises);
+            Car newCar = this.model.addServiceVisitById(car.getId(), cena, datum, popises, id);
 
             this.mainController.replaceInModel(car, newCar);
 

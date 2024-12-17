@@ -15,18 +15,21 @@ import java.util.ArrayList;
 public class Database {
     private ExtendibleHashing<CarId> extId;
     private ExtendibleHashing<CarSPZ> extSPZ;
+    private ExtendibleHashing<Servis> extServis;
     private HeapFile<Car> heap;
 
-    public Database(int maxRecordCount, String fileName) {
-        extId = new ExtendibleHashing<>("id_" + fileName, CarId.class, maxRecordCount);
-        extSPZ = new ExtendibleHashing<>("spz_" + fileName, CarSPZ.class, maxRecordCount);
-        heap = new HeapFile<>("heap_" + fileName, Car.class, maxRecordCount);
+    public Database(int cluster, String fileName) {
+        extId = new ExtendibleHashing<>("id_" + fileName, CarId.class, cluster);
+        extSPZ = new ExtendibleHashing<>("spz_" + fileName, CarSPZ.class, cluster);
+        heap = new HeapFile<>("heap_" + fileName, Car.class, cluster);
+        extServis = new ExtendibleHashing<>("servis_" + fileName, Servis.class, cluster);
     }
 
-    public Database(String fileName, int maxId, int maxSPZ, int maxHeap) {
-        extId = new ExtendibleHashing<>(fileName, CarId.class, maxId);
-        extSPZ = new ExtendibleHashing<>(fileName, CarSPZ.class, maxSPZ);
-        heap = new HeapFile<>(fileName, Car.class, maxHeap);
+    public Database(String fileName, int clusterId, int clusterSpz, int clusterHeap) {
+        extId = new ExtendibleHashing<>("id_" + fileName, CarId.class, clusterId);
+        extSPZ = new ExtendibleHashing<>("spz_" + fileName, CarSPZ.class, clusterSpz);
+        heap = new HeapFile<>("heap_" + fileName, Car.class, clusterHeap);
+        extServis = new ExtendibleHashing<>("servis_" + fileName, Servis.class, 500);
     }
 
     public int findIndexById(int id) {
@@ -62,11 +65,13 @@ public class Database {
         if (car == null) {
             throw new RuntimeException("nenajdene auto: " + id);
         }
+
+        extServis.insert(servis);
         car.addServis(servis);
         heap.update(index, block);
     }
 
-    public Car addServiceVisitById(int id, double cena, LocalDate datum, ArrayList<String> popis) {
+    public Car addServiceVisitById(int id, double cena, LocalDate datum, ArrayList<String> popis, int idservis) {
         int index = findIndexById(id);
         if (index == -1) return null;
         Block<Car> block = heap.getBlock(index);
@@ -74,16 +79,18 @@ public class Database {
         if (car == null) {
             throw new RuntimeException("nenajdene auto: " + id);
         }
-        Servis serv = new Servis(datum, cena);
+
+        Servis serv = new Servis(datum, cena, idservis);
         for (String p : popis) {
             serv.addPopis(p);
         }
+        extServis.insert(serv);
         car.addServis(serv);
         heap.update(index, block);
         return car;
     }
 
-    public void addServiceVisitBySPZ(String SPZ, double cena, LocalDate datum, String[] popis) {
+    public void addServiceVisitBySPZ(String SPZ, double cena, LocalDate datum, String[] popis, int id) {
         int index = findIndexBySPZ(SPZ);
         if (index == -1) return;
         Block<Car> block = heap.getBlock(index);
@@ -91,10 +98,11 @@ public class Database {
         if (car == null) {
             throw new RuntimeException("nenajdene auto: " + SPZ);
         }
-        Servis serv = new Servis(datum, cena);
+        Servis serv = new Servis(datum, cena, id);
         for (String p : popis) {
             serv.addPopis(p);
         }
+        extServis.insert(serv);
         car.addServis(serv);
         heap.update(index, block);
     }
@@ -107,6 +115,7 @@ public class Database {
         if (car == null) {
             throw new RuntimeException("nenajdene auto: " + SPZ);
         }
+        extServis.insert(servis);
         car.addServis(servis);
         heap.update(index, block);
     }
@@ -133,6 +142,7 @@ public class Database {
             throw new RuntimeException("Auto nanjdene: " + id);
         }
 
+        extServis.delete(servis);
         car.removeServis(servis);
         heap.update(index, block);
     }
@@ -146,6 +156,7 @@ public class Database {
         if (car == null) {
             throw new RuntimeException("Auto nanjdene: " + SPZ);
         }
+        extServis.delete(servis);
         car.removeServis(servis);
         heap.update(index, block);
     }
@@ -156,6 +167,12 @@ public class Database {
         Car car = heap.getRecord(index, new Car(id));
         if (car == null) {
             throw new RuntimeException("Car not found with ID: " + id);
+        }
+
+        ArrayList<Servis> servises = car.getServisy();
+
+        for (Servis servis : servises) {
+            extServis.delete(servis);
         }
 
         extId.delete(new CarId(car.getId(), 0));
@@ -170,6 +187,13 @@ public class Database {
         if (car == null) {
             throw new RuntimeException("Car not found with SPZ: " + SPZ);
         }
+
+        ArrayList<Servis> servises = car.getServisy();
+
+        for (Servis servis : servises) {
+            extServis.delete(servis);
+        }
+
         extId.delete(new CarId(car.getId(), 0));
         extSPZ.delete(new CarSPZ(car.getSPZ(), 0));
         heap.delete(index, car);
@@ -202,13 +226,81 @@ public class Database {
         return cars;
     }
 
+    public void printAllSPZHashBlocks() {
+        ArrayList<HashBlock<CarSPZ>> cids = extSPZ.getAllHashBlocks();
+        for (HashBlock<CarSPZ> block : cids) {
+            System.out.println(block);
+        }
+    }
+
+    public void printAllIDHashBlocks() {
+        ArrayList<HashBlock<CarId>> cids = extId.getAllHashBlocks();
+        for (HashBlock<CarId> block : cids) {
+            System.out.println(block);
+        }
+    }
+
+    public void printAllHeapBlocks() {
+        ArrayList<Block<Car>> cids = heap.getAllBlocks();
+        for (Block<Car> block : cids) {
+            System.out.println(block);
+        }
+    }
+
+    public ArrayList<String> allHeapBlocksToString() {
+        return heap.allBlocksToString();
+    }
+
+    public ArrayList<String> stringDirectoryCarId() {
+        return this.extId.toStringDirectory();
+    }
+
+    public ArrayList<String> stringDirectoryCarSpz() {
+        return this.extSPZ.toStringDirectory();
+    }
+
+    public String printHeapFile() {
+        return this.heap.toString();
+    }
+
+    public String printHashFileCarId() {
+        return this.extId.toString();
+    }
+
+    public String printHashFileCarSpz() {
+        return this.extSPZ.toString();
+    }
+
+    public ArrayList<Servis> getAllCarsServis() {
+        ArrayList<Servis> servises = new ArrayList<>();
+        ArrayList<HashBlock<Servis>> cservis = extServis.getAllHashBlocks();
+        for (HashBlock<Servis> block : cservis) {
+            servises.addAll(block.getRecords());
+        }
+        return servises;
+    }
+
+    public void printAllServis() {
+        ArrayList<Servis> servises = this.getAllCarsServis();
+        for (Servis servis : servises) {
+            System.out.println(servis);
+        }
+    }
+
     public void insert(Car car) {
         if (findIndexById(car.getId()) != -1) {
             throw new RuntimeException("Auto s idckom:" + car.getId() + " existuje");
         }
+
         int address = heap.insert(car);
         extId.insert(new CarId(car.getId(), address));
         extSPZ.insert(new CarSPZ(car.getSPZ(), address));
+
+        ArrayList<Servis> servises = car.getServisy();
+        for (int i = 0; i < servises.size(); i++) {
+            extServis.insert(servises.get(i));
+        }
+
     }
 
     public void insert(String meno, String priezvisko, int id, String spz) {
@@ -219,17 +311,20 @@ public class Database {
         heap.saveState();
         extId.saveState();
         extSPZ.saveState();
+        extServis.saveState();
     }
 
     public void close() {
         heap.closeFileManager();
         extId.closeFileManager();
         extSPZ.closeFileManager();
+        extServis.closeFileManager();
     }
 
     public void zmazSubory() {
         heap.getFileManager().getFile().delete();
         extId.getFileManager().getFile().delete();
         extSPZ.getFileManager().getFile().delete();
+        extServis.getFileManager().getFile().delete();
     }
 }

@@ -1,7 +1,5 @@
 package kozelek.gui.view;
 
-import kozelek.gui.controller.StartController;
-
 import javax.swing.*;
 import java.awt.*;
 
@@ -9,7 +7,9 @@ public class StartWindow extends JFrame {
     private JTextField filenameField;
     private JPanel panel1;
     private JButton startButton;
-    private JTextField recordCountField;
+    private JTextField clusterHeapField;
+    private JTextField clusterCarIdField;
+    private JTextField clusterCarSpzField;
 
     public StartWindow() {
         setTitle("Start Window");
@@ -28,7 +28,15 @@ public class StartWindow extends JFrame {
         return startButton;
     }
 
-    public JTextField getRecordCountField() {
-        return recordCountField;
+    public JTextField getClusterHeapField() {
+        return clusterHeapField;
+    }
+
+    public JTextField getClusterCarIdField() {
+        return clusterCarIdField;
+    }
+
+    public JTextField getClusterCarSpzField() {
+        return clusterCarSpzField;
     }
 }

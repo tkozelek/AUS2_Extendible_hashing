@@ -22,7 +22,7 @@ import java.util.Random;
 public class Main {
 
     public static void main(String[] args) {
-        StartWindow window = new StartWindow();
-        new StartController(window);
+        StartWindow sw = new StartWindow();
+        StartController controller = new StartController(sw);
     }
 }

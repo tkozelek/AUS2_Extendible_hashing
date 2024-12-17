@@ -11,15 +11,16 @@ import java.util.Collections;
 public class Block<T extends IRecord<T>> implements IByteData {
     private ArrayList<T> records;
     private int validCount; // pocet platnych zaznamov
-    private final int maxRecordCount; // maximalny pocet zaznamov v bloku
     private int next; // adresa dalsieho volneho bloku
     private int prev; // adresa pred. volneho bloku
+    private final int clusterSize;
+    private final int blockDataSize = 3 * Helper.VELKOST_INTEGER;
 
     private final Class<T> recordClass;
     private final T instance;
 
-    public Block(int maxRecordCount, Class<T> recordClass) {
-        this.maxRecordCount = maxRecordCount;
+    public Block(int clusterSize, Class<T> recordClass) {
+        this.clusterSize = clusterSize;
         this.validCount = 0;
         this.next = -1; // -1 znamená koniec reťazca
         this.prev = -1; // -1 znamená začiatok reťazca
@@ -57,7 +58,11 @@ public class Block<T extends IRecord<T>> implements IByteData {
     }
 
     public int getMaxRecordCount() {
-        return maxRecordCount;
+        return (clusterSize - blockDataSize) / this.instance.getSize();
+    }
+
+    public int getClusterSize() {
+        return clusterSize;
     }
 
     public void edit(T oldRecord, T newRecord) {
@@ -101,7 +106,7 @@ public class Block<T extends IRecord<T>> implements IByteData {
     }
 
     public boolean addRecord(T record) {
-        if (validCount < maxRecordCount) {
+        if (validCount < getMaxRecordCount()) {
             this.records.add(record);
             this.validCount++;
             return true;
@@ -141,7 +146,7 @@ public class Block<T extends IRecord<T>> implements IByteData {
     @Override
     public int getSize() {
         // pocet platnych (byte?) + zaznam * 5 + prev + next
-        return Helper.VELKOST_INTEGER + (maxRecordCount * this.instance.getSize()) + Helper.VELKOST_INTEGER + Helper.VELKOST_INTEGER;
+        return Helper.VELKOST_INTEGER + (getMaxRecordCount() * this.instance.getSize()) + Helper.VELKOST_INTEGER + Helper.VELKOST_INTEGER;
     }
 
     @Override
@@ -151,7 +156,7 @@ public class Block<T extends IRecord<T>> implements IByteData {
 
             // recordy
             dataStream.writeInt(this.validCount);
-            for (int i = 0; i < this.maxRecordCount; i++) {
+            for (int i = 0; i < getMaxRecordCount(); i++) {
                 if (i < this.validCount) {
                     dataStream.write(this.records.get(i).toByteArray());
                 } else {
@@ -162,6 +167,11 @@ public class Block<T extends IRecord<T>> implements IByteData {
             // pointre na dalsi blok
             dataStream.writeInt(this.prev);
             dataStream.writeInt(this.next);
+
+            int currentSize = byteStream.size();
+            if (currentSize < clusterSize) {
+                dataStream.write(new byte[clusterSize - currentSize]);
+            }
 
             return byteStream.toByteArray();
         } catch (IOException e) {
@@ -178,7 +188,7 @@ public class Block<T extends IRecord<T>> implements IByteData {
             this.validCount = dataStream.readInt();
 
             this.records = new ArrayList<>();
-            for (int i = 0; i < this.maxRecordCount; i++) {
+            for (int i = 0; i < getMaxRecordCount(); i++) {
                 byte[] recordBytes = new byte[this.instance.getSize()];
                 dataStream.readFully(recordBytes);
 
@@ -201,14 +211,17 @@ public class Block<T extends IRecord<T>> implements IByteData {
     @Override
     public String toString() {
         return "Block{" +
-                "records=" + records +
-                ", validCount=" + validCount +
-                ", maxRecordCount=" + maxRecordCount +
+                "validCount=" + validCount +
+                ", MRC=" + getMaxRecordCount() +
                 ", next=" + next +
-                ", prev=" + prev;
+                ", prev=" + prev +
+                ", clusterSize=" + clusterSize +
+                ", records=" + records +
+                '}';
     }
 
     public boolean isFull() {
-        return validCount == maxRecordCount;
+        int max = getMaxRecordCount();
+        return validCount == max;
     }
 }
