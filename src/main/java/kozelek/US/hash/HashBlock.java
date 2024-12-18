@@ -9,21 +9,12 @@ import java.io.*;
 import java.util.ArrayList;
 
 public class HashBlock<T extends IHashableData<T>> extends Block<T> {
-    private int localDepth;
     private final int blockDataSize = 2 * Helper.VELKOST_INTEGER;
 
     public HashBlock(int clusterSize, Class<T> recordClass) {
         super(clusterSize, recordClass);
-        this.localDepth = 1;
     }
 
-    public int getLocalDepth() {
-        return localDepth;
-    }
-
-    public void setLocalDepth(int localDepth) {
-        this.localDepth = localDepth;
-    }
 
     public int getMaxRecordCount() {
         int cluster = getClusterSize();
@@ -36,15 +27,13 @@ public class HashBlock<T extends IHashableData<T>> extends Block<T> {
     public int getSize() {
         // localDepth + pocetrecordov + (maxpocetrecordov * carId/carECV * size())
         // carid - 4 + 4 + (3*8)
-        return Helper.VELKOST_INTEGER + Helper.VELKOST_INTEGER + (this.getMaxRecordCount() * this.getInstance().getSize());
+        return Helper.VELKOST_INTEGER + (this.getMaxRecordCount() * this.getInstance().getSize());
     }
 
     @Override
     public byte[] toByteArray() {
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
             DataOutputStream dataStream = new DataOutputStream(byteStream);
-
-            dataStream.writeInt(localDepth);
 
             // recordy
             dataStream.writeInt(this.getValidCount());
@@ -73,8 +62,6 @@ public class HashBlock<T extends IHashableData<T>> extends Block<T> {
         try (ByteArrayInputStream byteStream = new ByteArrayInputStream(bytes);
              DataInputStream dataStream = new DataInputStream(byteStream)) {
 
-            this.localDepth = dataStream.readInt();
-
             // pocet platnych
             this.setValidCount(dataStream.readInt());
 
@@ -99,8 +86,8 @@ public class HashBlock<T extends IHashableData<T>> extends Block<T> {
     @Override
     public String toString() {
         return "HB{" +
-                "LD=" + localDepth +
-                ", MRC=" + getMaxRecordCount() +
+                "MRC=" + getMaxRecordCount() +
+                ", VC=" + getValidCount() +
                 ", " + getRecords();
     }
 }

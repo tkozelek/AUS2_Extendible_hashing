@@ -247,6 +247,14 @@ public class Database {
         }
     }
 
+    public ArrayList<String> stringAllBlocksSequenceCarId() {
+        return this.extId.getAllHashBlocksSequence();
+    }
+
+    public ArrayList<String> stringAllBlocksSequenceCarSpz() {
+        return this.extSPZ.getAllHashBlocksSequence();
+    }
+
     public ArrayList<String> allHeapBlocksToString() {
         return heap.allBlocksToString();
     }

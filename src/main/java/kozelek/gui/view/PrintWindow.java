@@ -13,6 +13,7 @@ public class PrintWindow extends JFrame {
     private JLabel cspzHeadLabel;
     private JButton refreshButton;
     private JButton goBackButton;
+    private JButton sequenceButton;
 
     public PrintWindow() {
         setTitle("Print info window");
@@ -21,6 +22,10 @@ public class PrintWindow extends JFrame {
         pack();
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         add(panel1);
+    }
+
+    public JButton getSequenceButton() {
+        return sequenceButton;
     }
 
     public JButton getRefreshButton() {

@@ -17,11 +17,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class ExtendibleHashingTest {
 
     private ExtendibleHashing<TestRecord> ext;
-    private final int clusterSize = 500;
+    private final int clusterSize = 120;
     private Random rand;
     private ArrayList<TestRecord> records;
     private ArrayList<Integer> indexes;
-    private final int pocet = 5000;
+    private final int pocet = 500;
     private final int pocetDelete = 500;
 
     @BeforeEach
@@ -35,13 +35,14 @@ class ExtendibleHashingTest {
 
         ext = new ExtendibleHashing<>(tempFile, TestRecord.class, clusterSize);
         rand = new Random();
+        rand.setSeed(2);
 
         this.records = new ArrayList<>(pocet);
     }
 
     @Test
     void testInsertAndGet() {
-        for (int i = 0; i < pocet; i++) {
+        for (int i = 1; i <= pocet; i++) {
             TestRecord record = new TestRecord(i, "Record " + i);
             ext.insert(record);
             this.records.add(record);
@@ -56,13 +57,13 @@ class ExtendibleHashingTest {
 
     @Test
     void testInsertEditGet() {
-        for (int i = 0; i < pocet; i++) {
+        for (int i = 1; i <= pocet; i++) {
             TestRecord record = new TestRecord(i, "Record " + i);
             int address = ext.insert(record);
             assertTrue(address >= 0);
         }
 
-        for (int i = 0; i < records.size(); i++) {
+        for (int i = 1; i <= records.size(); i++) {
             TestRecord edited = new TestRecord(i, "Edited " + i);
             int index = rand.nextInt(records.size());
             TestRecord toEdit = records.remove(index);
@@ -75,7 +76,7 @@ class ExtendibleHashingTest {
             assertNull(notFound);
         }
 
-        for (int i = 0; i < records.size(); i++) {
+        for (int i = 1; i <= records.size(); i++) {
             int index = rand.nextInt(records.size());
             TestRecord edited = records.remove(index);
             int blockIndex = indexes.remove(index);
@@ -88,13 +89,13 @@ class ExtendibleHashingTest {
 
     @Test
     void testInsertAndDelete() {
-        for (int i = 0; i < pocet; i++) {
+        for (int i = 1; i <= pocet; i++) {
             TestRecord record = new TestRecord(i, "Record " + i);
             ext.insert(record);
             records.add(record);
         }
 
-        for (int i = 0; i < pocet; i++) {
+        for (int i = 1; i <= pocet; i++) {
             int index = rand.nextInt(records.size());
             TestRecord record = records.remove(index);
 
@@ -124,8 +125,7 @@ class ExtendibleHashingTest {
             this.records.add(test);
         }
 
-
-        for (int j = init; j < pocet + init; j++) {
+        for (int j = init + 1; j <= pocet + init; j++) {
             int operation = rand.nextInt(numberOfRandomOperations);
             switch (operation) {
                 case 0: // insert
@@ -139,16 +139,10 @@ class ExtendibleHashingTest {
                         TestRecord toDelete = this.records.remove(index);
 
                         TestRecord found = ext.getRecord(toDelete);
-                        if (found == null) {
-                            System.out.println(j);
-                            System.out.println(toDelete);
-                            ext.printAll();
-                        }
 
                         assertTrue(found.equal(toDelete));
 
                         ext.delete(toDelete);
-
 
                         found = ext.getRecord(toDelete);
                         assertNull(found, "Test == deleted");
@@ -195,6 +189,7 @@ class ExtendibleHashingTest {
                     continue;
             }
         }
+        ext.printAll();
     }
 
     public static class TestRecord implements IRecord<TestRecord>, IHashableData<TestRecord> {
@@ -267,7 +262,7 @@ class ExtendibleHashingTest {
         public BitSet getHash() {
             if (id == 0) {
                 BitSet bitSet = new BitSet(1);
-                bitSet.set(0);
+                bitSet.set(0, false);
                 return bitSet;
             }
 

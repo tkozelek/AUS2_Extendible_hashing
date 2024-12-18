@@ -129,6 +129,14 @@ public class Model {
         return database.stringDirectoryCarSpz();
     }
 
+    public ArrayList<String> stringAllBlocksSequenceCarId() {
+        return database.stringAllBlocksSequenceCarId();
+    }
+
+    public ArrayList<String> stringAllBlocksSequenceCarSpz() {
+        return database.stringAllBlocksSequenceCarSpz();
+    }
+
     public ArrayList<String> allHeapBlocksToString() {
         return database.allHeapBlocksToString();
     }

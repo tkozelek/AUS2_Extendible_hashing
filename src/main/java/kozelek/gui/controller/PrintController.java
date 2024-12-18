@@ -24,7 +24,30 @@ public class PrintController {
         this.view.getRefreshButton().addActionListener(e -> refresh());
         this.view.getGoBackButton().addActionListener(e -> goBack());
 
+        this.view.getSequenceButton().addActionListener(e -> refreshSequence());
+
         this.refresh();
+    }
+
+    private void refreshSequence() {
+        ArrayList<String> heap = this.model.allHeapBlocksToString();
+        ArrayList<String> cid = this.model.stringAllBlocksSequenceCarId();
+        ArrayList<String> cspz = this.model.stringAllBlocksSequenceCarSpz();
+
+        this.clearModels();
+
+        this.heapModel.addAll(heap);
+        this.cidModel.addAll(cid);
+        this.cspzModel.addAll(cspz);
+
+        if (!heapModel.isEmpty())
+            view.getHeapList().setModel(heapModel);
+        if (!cidModel.isEmpty())
+            view.getCidList().setModel(cidModel);
+        if (!cspzModel.isEmpty())
+            view.getCspzList().setModel(cspzModel);
+
+        this.refreshHeaders();
     }
 
     private void goBack() {
