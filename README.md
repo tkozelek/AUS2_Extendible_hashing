@@ -17,7 +17,6 @@ indexes, one by car ID and one by licence plate. Written from scratch in Java, w
   visits, each with at most 10 lines of notes.
 - Insert, find, edit and delete, a random data generator, a block-by-block view of every file, and
   the state of the files is saved, so the data survives a restart.
-- Randomised JUnit 5 tests of the heap file and the hash file in `src/main/java/kozelek/test`.
 
 ## Run it
 
